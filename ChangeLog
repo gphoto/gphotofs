@@ -1,5 +1,12 @@
 2005-12-29  Philip Langdale  <philipl@mail.utexas.edu>
 
+        * configure.ac
+        * Makefile.am
+        * NEWS
+        * README: 0.1 Release
+
+2005-12-29  Philip Langdale  <philipl@mail.utexas.edu>
+
 	* gphotofs.c: (gphotofs_unlink). Test the result
 	of the delete operation correctly.
 

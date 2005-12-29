@@ -1,4 +1,4 @@
-GPhotoFS (http://intr.overt.org/gphotofs)
+GPhotoFS
 --------
 
 GPhotoFS is a filesystem client based on libgphoto2 that exposes 
@@ -12,12 +12,24 @@ As libgphoto2 is a userspace library for interacting with cameras,
 it is natural that if one to build a filesystem ontop of it, one
 should use FUSE, and that is what I have done.
 
+Getting it
+----------
+
+For now, releases are available at:
+
+   http://intr.overt.org/gphotofs
+
+and the current source is available in the gphoto project's cvs
+repository:
+
+   http://sourceforge.net/projects/gphoto
+
 Requirements
 ------------
 
-FUSE > 2.2
-GLib > 2.6
-libgphoto2 > 2.1 (Maybe one can go further back but I haven't tried).
+FUSE >= 2.2
+GLib >= 2.6
+libgphoto2 >= 2.1 (Maybe one can go further back but I haven't tried).
 
 How to mount a filesystem
 -------------------------
@@ -36,22 +48,35 @@ and when you're finished, you can unmount with:
 
    fusermount -u <mountpoint>
 
-Caveats
--------
+Usage
+-----
 
-As this is very early software, it has very basic functionality and
-no real error handling. It works well enough for me to read photos off
-my camera but I can't vouch for anything more.
+As you'd expect, once you've mounted the camera, you can interact
+with it like a filesystem, though with limitations.
 
-I can't guarantee that it will read your photos off correctly, but there
-shouldn't be any danger of it corrupting them on your camera. Obviously,
-if you avail yourself of the ability to delete files on the camera, you
-shouldn't be surprised if the files you delete really do disappear. Oh,
-and deleting files is really really slow. Not sure why yet.
+You can:
+- Traverse directories
+- Read the contents of files
+- Delete files
+- Move files (Read + delete)
+- Use 'du' to measure file size
+- Mount the filesystem before plugging in a camera.
 
-Unplugging a camera while the filesystem is mounted will confuse it, but
-nothing really serious should happen. Nevertheless, I recommend you 
-don't do this.
+You cannot:
+- Add/Remove directories
+- Rename files/directories
+- Add or modify files
+  - All of these are supported by libgphoto2, but only if the camera
+    supports them. As my silly Canon doesn't support these operations,
+    I cannot implement them effectively.
+- Get free space information
+  - This one seems to be very much at the mercy of the camera
+    manufacturer. I don't know if it'll ever be possible in a
+    general way.
+- Unplug and replug a camera and expect things to keep working.
+  - The backend gets confused and you'll just get errors when
+    you try to do anything. Unmount and remount the filesystem
+    and you'll be back in business.
 
 Acknowledgements
 ----------------

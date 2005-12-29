@@ -1,4 +1,12 @@
-What is new in 0.0
+What's new in 0.1
+-----------------
+
+* First respectable release.
+  - Notices libgphoto2 errors and tries to map them to errnos.
+  - Doesn't go into an infinite loop when attempting to stat a
+    nonexistent file.
+
+What's new in 0.0
 ------------------
 
 * Initial release
