@@ -1,0 +1,7 @@
+What is new in 0.0
+------------------
+
+* Initial release
+  - Can view directory structure and read files off one camera.
+    (I have no idea how it will act will multiple cameras plugged in.)
+  - Can delete files.

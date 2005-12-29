@@ -1,0 +1,71 @@
+GPhotoFS (http://intr.overt.org/gphotofs)
+--------
+
+GPhotoFS is a filesystem client based on libgphoto2 that exposes 
+supported cameras as filesystems; while some cameras implement the
+USB Mass Storage class and already appear as filesystems (making
+this program redundant), many use the Picture Transfer Protocol (PTP)
+or some other custom protocol. But as long as the camera is supported
+by libgphoto2, it can be mounted as a filesystem using this program.
+
+As libgphoto2 is a userspace library for interacting with cameras,
+it is natural that if one to build a filesystem ontop of it, one
+should use FUSE, and that is what I have done.
+
+Requirements
+------------
+
+FUSE > 2.2
+GLib > 2.6
+libgphoto2 > 2.1 (Maybe one can go further back but I haven't tried).
+
+How to mount a filesystem
+-------------------------
+
+Right now, GPhotoFS has no special command line parameters; all you
+do is run it and give it a mount point. It relies on libgphoto2 to
+autodect your camera. So if the gphoto2 tool Just Works(tm) then 
+GPhotoFS will work too. I will eventually add support for specifying
+the camera/port in the same way that gphoto2 does.
+
+So, just do:
+
+   gphotofs <mountpoint>
+
+and when you're finished, you can unmount with:
+
+   fusermount -u <mountpoint>
+
+Caveats
+-------
+
+As this is very early software, it has very basic functionality and
+no real error handling. It works well enough for me to read photos off
+my camera but I can't vouch for anything more.
+
+I can't guarantee that it will read your photos off correctly, but there
+shouldn't be any danger of it corrupting them on your camera. Obviously,
+if you avail yourself of the ability to delete files on the camera, you
+shouldn't be surprised if the files you delete really do disappear. Oh,
+and deleting files is really really slow. Not sure why yet.
+
+Unplugging a camera while the filesystem is mounted will confuse it, but
+nothing really serious should happen. Nevertheless, I recommend you 
+don't do this.
+
+Acknowledgements
+----------------
+
+Christopher Lester wrote a FUSE filesystem that is built on top of the
+gphoto2 command line utility rather than libgphoto2. As he indicated he 
+was not inclined to move it over to the library, and as I wanted to have
+a go at writing a FUSE filesystem, I went ahead and did it. For the time
+being, his one is more featureful, but has problems compiling with the
+latest release of FUSE and is self-admittedly slow.
+
+http://www.hep.phy.cam.ac.uk/~lester/gphoto2-fuse-fs/
+
+Contact info
+------------
+
+Philip Langdale <philipl@mail.utexas.edu>

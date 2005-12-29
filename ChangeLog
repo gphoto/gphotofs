@@ -1,0 +1,9 @@
+2005-12-29  Philip Langdale  <philipl@mail.utexas.edu>
+
+	A autogen.sh
+	* configure.ac: Bump version to 0.0.99 for cvs.
+	Checking in to gphoto cvs.
+
+2005-12-28  Philip Langdale  <philipl@mail.utexas.edu>
+
+	* Initial 0.0 Release.
