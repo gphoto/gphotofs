@@ -315,7 +315,7 @@ gphotofs_unlink(const char *path)
    }
 
    ret = gp_camera_file_delete(p->camera, dir, file, p->context);
-   if (!ret) {
+   if (ret != 0) {
       return gpresultToErrno(ret);
    }
 
