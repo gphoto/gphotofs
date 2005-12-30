@@ -106,6 +106,8 @@ gphotofs_readdir(const char *path,
       stbuf->st_mode = S_IFDIR | 0555;
       /* This is not a correct number in general. */
       stbuf->st_nlink = 2;
+      stbuf->st_uid = getuid();
+      stbuf->st_gid = getgid();
 
       gp_list_get_name(list, i, &name);
       filler(buf, name, stbuf, 0);
@@ -139,6 +141,8 @@ gphotofs_readdir(const char *path,
       stbuf = g_new0(struct stat, 1);
       stbuf->st_mode = S_IFREG | 0444;
       stbuf->st_nlink = 1;
+      stbuf->st_uid = getuid();
+      stbuf->st_gid = getgid();
       stbuf->st_size = info.file.size;
       stbuf->st_mtime = info.file.mtime;
       stbuf->st_blocks = (info.file.size / 512) +
@@ -178,6 +182,8 @@ gphotofs_getattr(const char *path,
    if(strcmp(path, "/") == 0) {
       stbuf->st_mode = S_IFDIR | 0555;
       stbuf->st_nlink = 2;
+      stbuf->st_uid = getuid();
+      stbuf->st_gid = getgid();
    } else {
       struct stat *mystbuf = NULL;
       gpointer value;
@@ -212,9 +218,11 @@ gphotofs_getattr(const char *path,
       if (mystbuf) {
          stbuf->st_mode = mystbuf->st_mode;
          stbuf->st_nlink = mystbuf->st_nlink;
+         stbuf->st_uid = mystbuf->st_uid;
+         stbuf->st_gid = mystbuf->st_gid;
          stbuf->st_size = mystbuf->st_size;
-         stbuf->st_mtime = mystbuf->st_mtime;
          stbuf->st_blocks = mystbuf->st_blocks;
+         stbuf->st_mtime = mystbuf->st_mtime;
       } else {
          ret = -ENOENT;
       }
@@ -307,21 +315,28 @@ gphotofs_unlink(const char *path)
    GPCtx *p = (GPCtx *)fuse_get_context()->private_data;
    gchar *dir = g_path_get_dirname(path);
    gchar *file = g_path_get_basename(path);
-   int ret;
+   int ret = 0;
 
    /* Don't allow deletion of open files. */
    if (g_hash_table_lookup(p->reads, path)) {
-      return -EBUSY;
+      ret = -EBUSY;
+      goto exit;
    }
 
    ret = gp_camera_file_delete(p->camera, dir, file, p->context);
    if (ret != 0) {
-      return gpresultToErrno(ret);
+      ret = gpresultToErrno(ret);
+      goto exit;
    }
 
    g_hash_table_remove(p->files, path);
 
-   return 0;
+ exit:
+   g_free(dir);
+   g_free(file);
+
+   return ret;
+
 }
 
 static void *
