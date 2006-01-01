@@ -35,6 +35,34 @@ static int
 gpresultToErrno(int result)
 {
    switch (result) {
+   case GP_ERROR:
+      return -EPROTO;
+   case GP_ERROR_BAD_PARAMETERS:
+      return -EINVAL;
+   case GP_ERROR_NO_MEMORY:
+      return -ENOMEM;
+   case GP_ERROR_LIBRARY:
+      return -ENOSYS;
+   case GP_ERROR_UNKNOWN_PORT:
+      return -ENXIO;
+   case GP_ERROR_NOT_SUPPORTED:
+      return -EPROTONOSUPPORT;
+   case GP_ERROR_TIMEOUT:
+      return -ETIMEDOUT;
+   case GP_ERROR_IO:
+   case GP_ERROR_IO_SUPPORTED_SERIAL:
+   case GP_ERROR_IO_SUPPORTED_USB:
+   case GP_ERROR_IO_INIT:
+   case GP_ERROR_IO_READ:
+   case GP_ERROR_IO_WRITE:
+   case GP_ERROR_IO_UPDATE:
+   case GP_ERROR_IO_SERIAL_SPEED:
+   case GP_ERROR_IO_USB_CLEAR_HALT:
+   case GP_ERROR_IO_USB_FIND:
+   case GP_ERROR_IO_USB_CLAIM:
+   case GP_ERROR_IO_LOCK:
+      return -EIO;
+
    case GP_ERROR_CAMERA_BUSY:
       return -EBUSY;
    case GP_ERROR_FILE_NOT_FOUND:
@@ -80,7 +108,7 @@ gphotofs_readdir(const char *path,
                  struct fuse_file_info *fi)
 {
    GPCtx *p;
-   CameraList *list;
+   CameraList *list = NULL;
    int i;
    int ret = 0;
 
@@ -117,8 +145,10 @@ gphotofs_readdir(const char *path,
       g_hash_table_replace(p->dirs, key, stbuf);
    }
 
-   /* Read files */
    gp_list_free(list);
+   list = NULL;
+
+   /* Read files */
    gp_list_new(&list);
 
    ret = gp_camera_folder_list_files(p->camera, path, list, p->context);
@@ -155,10 +185,15 @@ gphotofs_readdir(const char *path,
       g_hash_table_replace(p->files, key, stbuf);
    }
 
+exit:
+   if (list) {
+      gp_list_free(list);
+   }
    return ret;
 
  error:
-   return gpresultToErrno(ret);
+   ret = gpresultToErrno(ret);
+   goto exit;
 }
 
 static int dummyfiller(void *buf,
@@ -271,7 +306,8 @@ gphotofs_open(const char *path,
 
 static int
 gphotofs_read(const char *path,
-              char *buf, size_t size,
+              char *buf,
+              size_t size,
               off_t offset,
               struct fuse_file_info *fi)
 {
@@ -279,19 +315,25 @@ gphotofs_read(const char *path,
    OpenFile *openFile;
    const char *data;
    unsigned long int dataSize;
+   int ret;
 
    openFile = g_hash_table_lookup(p->reads, path);
-   if (gp_file_get_data_and_size(openFile->file, &data, &dataSize) == 0 &&
-       offset < dataSize) {
-      if (offset + size > dataSize) {
-         size = dataSize - offset;
+   ret = gp_file_get_data_and_size(openFile->file, &data, &dataSize);
+   if (ret == 0) {
+      if (offset < dataSize) {
+         if (offset + size > dataSize) {
+            size = dataSize - offset;
+         }
+         memcpy(buf, data + offset, size);
+         ret = size;
+      } else {
+         ret = 0;
       }
-      memcpy(buf, data + offset, size);
    } else {
-      size = 0;
+      ret = gpresultToErrno(ret);
    }
 
-   return size;
+   return ret;
 }
 
 static int
@@ -301,9 +343,11 @@ gphotofs_release(const char *path,
    GPCtx *p = (GPCtx *)fuse_get_context()->private_data;
    OpenFile *openFile = g_hash_table_lookup(p->reads, path);
 
-   openFile->count--;
-   if (openFile->count == 0) {
-      g_hash_table_remove(p->reads, path);
+   if (openFile) {
+      openFile->count--;
+      if (openFile->count == 0) {
+         g_hash_table_remove(p->reads, path);
+      }
    }
 
    return 0;

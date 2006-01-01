@@ -1,3 +1,13 @@
+2006-01-01  Philip Langdale  <philipl@mail.utexas.edu>
+
+	* gphotofs.c:
+	(gpresultToErrno). Add the result codes from
+	gphoto2-port-result.h
+	(gphotofs_readdir). Fix rampant memory leak
+	where the file list wasn't being freed.
+	(gphotofs_read). Report errors.
+	(gphotofs_release). Made a little more robust.
+
 2005-12-30  Philip Langdale  <philipl@mail.utexas.edu>
 
 	* gphotofs.c: (gphotofs_readdir) (gphotofs_getattr).
