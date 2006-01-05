@@ -1,4 +1,4 @@
-AC_INIT(gphotofs, 0.1)
+AC_INIT(gphotofs, 0.2)
 AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, AC_PACKAGE_VERSION)
 AM_CONFIG_HEADER(config.h)
 
@@ -9,6 +9,13 @@ PKG_CHECK_MODULES(FUSE, fuse >= 2.2 \
                         libgphoto2 >= 2.1)
 AC_SUBST(FUSE_CFLAGS)
 AC_SUBST(FUSE_LIBS)
+
+ALL_LINGUAS=""
+GETTEXT_PACKAGE="gphotofs"
+AC_SUBST(GETTEXT_PACKAGE)
+AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE,"$GETTEXT_PACKAGE",
+                   [Define to the Gettext package name.])
+AM_GLIB_GNU_GETTEXT
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

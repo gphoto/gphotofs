@@ -1,3 +1,13 @@
+What's new in 0.2
+-----------------
+
+- Fixed a big memory leak that happened whenever a directory
+  was listed.
+- Report libgphoto2_port errors.
+- Set UID and GID to match the user who ran gphotofs.
+  - This is cosmetic. The allow_root and allow_other fuse options
+    are what really control access.
+
 What's new in 0.1
 -----------------
 
