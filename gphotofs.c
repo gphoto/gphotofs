@@ -86,6 +86,7 @@ gpresultToErrno(int result)
    case GP_ERROR_OS_FAILURE:
       return -EPIPE;
    }
+   return -EINVAL;
 }
 
 struct GPCtx {
