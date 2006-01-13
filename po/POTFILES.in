@@ -1,0 +1,5 @@
+
+# List of source files containing translatable strings.
+# Please keep this list in alphabetic order.
+[encoding: UTF-8]
+gphotofs.c
