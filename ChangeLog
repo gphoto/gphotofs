@@ -1,5 +1,12 @@
 2006-01-12  Philip Langdale  <philipl@mail.utexas.edu>
 
+	* gphotofs.c: (main) (gphotofs_init).
+	Start adding support for relevant command line options.
+	--speed and --model have been implemented while --port
+	and --usbid are pending.
+
+2006-01-12  Philip Langdale  <philipl@mail.utexas.edu>
+
 	* po/POTFILES.in: Add this in preparation for
 	localisation support.
 

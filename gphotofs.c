@@ -6,17 +6,38 @@
     See the file COPYING.
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <fuse.h>
 
 #include <gphoto2.h>
 
 #include <glib.h>
+#include <glib/gi18n.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+
+
+/*
+ * Static variables set by command line arguments.
+ */
+static gchar *sPort = NULL;
+static gchar *sModel = NULL;
+static gchar *sUsbid = NULL;
+static gint sSpeed = 0;
+static gboolean sHelp;
+
+/*
+ * The OpenFile struct encapsulates a CameraFile and an open count.
+ * This allows us to track multiple overlapping open/release calls
+ * on a file.
+ */
 
 struct OpenFile {
    CameraFile *file;
@@ -30,6 +51,14 @@ freeOpenFile(OpenFile *openFile)
    gp_file_unref(openFile->file);
    g_free(openFile);
 }
+
+
+/*
+ * gpresultToErrno:
+ *
+ * Maps libgphoto2 errors to errnos. For some errors, there isn't
+ * really a good mapping, so a best effort has to be made.
+ */
 
 static int
 gpresultToErrno(int result)
@@ -387,9 +416,56 @@ gphotofs_unlink(const char *path)
 static void *
 gphotofs_init(void)
 {
+   int ret = 0;
    GPCtx *p = g_new0(GPCtx, 1);
 
    gp_camera_new(&p->camera);
+   gp_abilities_list_new(&p->abilities);
+
+   if (sSpeed) {
+      GPPortInfo info;
+
+      /* Make sure we've got a serial port. */
+      ret = gp_camera_get_port_info(p->camera, &info);
+      if (ret != 0) {
+         goto error;
+      } else if (info.type != GP_PORT_SERIAL) {
+         g_fprintf(stderr, "%s\n", _("You can only specify speeds for serial ports."));
+         goto error;
+      }
+
+      /* Set the speed. */
+      ret = gp_camera_set_port_speed(p->camera, sSpeed);
+      if (ret != 0) {
+         goto error;
+      }
+   }
+
+   if (sModel) {
+      CameraAbilities a;
+      int m;
+
+      m = gp_abilities_list_lookup_model(p->abilities, sModel);
+      if (m < 0) {
+         goto error;
+      }
+
+      ret = gp_abilities_list_get_abilities(p->abilities, m, &a);
+      if (ret != 0) {
+         goto error;
+      }
+
+      ret = gp_camera_set_abilities(p->camera, a);
+      if (ret != 0) {
+         goto error;
+      }
+
+      ret = gp_setting_set("gphoto2", "model", a.model);
+      if (ret != 0) {
+         goto error;
+      }
+   }
+
    p->context = gp_context_new();
 
    p->dirs = g_hash_table_new_full(g_str_hash, g_str_equal,
@@ -400,6 +476,9 @@ gphotofs_init(void)
                                     g_free, (GDestroyNotify)freeOpenFile);
 
    return p;
+
+ error:
+   exit(EXIT_FAILURE);
 }
 
 static void
@@ -445,7 +524,36 @@ static struct fuse_operations gphotofs_oper = {
     .unlink	= gphotofs_unlink,
 };
 
-int main(int argc, char *argv[])
+static GOptionEntry options[] =
 {
-    return fuse_main(argc, argv, &gphotofs_oper);
+   { "port", 0, 0, G_OPTION_ARG_STRING, &sPort, N_("Specify port device"), "path" },
+   { "speed", 0, 0, G_OPTION_ARG_INT, &sSpeed, N_("Specify serial transfer speed"), "speed" },
+   { "camera", 0, 0, G_OPTION_ARG_STRING, &sModel, N_("Specify camera model"), "model" },
+   { "usbid", 0, 0, G_OPTION_ARG_STRING, &sUsbid, N_("(expert only) Override USB IDs"), "usbid" },
+   { "help-fuse", 'h', 0, G_OPTION_ARG_NONE, &sHelp, N_("Show FUSE help options"), NULL },
+};
+
+int
+main(int argc,
+     char *argv[])
+{
+   GError *error = NULL;
+
+   GOptionContext *context = g_option_context_new(_("- gphoto filesystem"));
+   g_option_context_add_main_entries(context, options, GETTEXT_PACKAGE);
+   g_option_context_set_ignore_unknown_options(context, TRUE);
+   g_option_context_parse(context, &argc, &argv, &error);
+
+   if (sHelp) {
+      guint i;
+      const char *fusehelp[] = { g_get_prgname(), "-ho", NULL};
+
+      return fuse_main(2, (char **)fusehelp, &gphotofs_oper);
+   } else if (sPort) {
+      g_fprintf(stderr, "--port is not yet implemented\n");
+   } else if (sUsbid) {
+      g_fprintf(stderr, "--usbid is not yet implemented\n");
+   } else {
+      return fuse_main(argc, argv, &gphotofs_oper);
+   }
 }
