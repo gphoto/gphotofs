@@ -416,7 +416,7 @@ gphotofs_unlink(const char *path)
 static void *
 gphotofs_init(void)
 {
-   int ret = 0;
+   int ret = GP_OK;
    GPCtx *p = g_new0(GPCtx, 1);
 
    gp_camera_new(&p->camera);
@@ -447,6 +447,8 @@ gphotofs_init(void)
 
       m = gp_abilities_list_lookup_model(p->abilities, sModel);
       if (m < 0) {
+         g_fprintf(stderr, _("Model %s was not recognised."), sModel);
+         g_fprintf(stderr, "\n");
          goto error;
       }
 
@@ -466,6 +468,51 @@ gphotofs_init(void)
       }
    }
 
+   if (sPort) {
+      GPPortInfo info;
+      GPPortInfoList *il = NULL;
+      int i;
+
+      ret = gp_port_info_list_new(&il);
+      if (ret != 0) {
+         goto error;
+      }
+
+      ret = gp_port_info_list_load(il);
+      if (ret != 0) {
+         goto error;
+      }
+
+      i = gp_port_info_list_lookup_path(il, sPort);
+      if (i == GP_ERROR_UNKNOWN_PORT) {
+         g_fprintf(stderr,
+                   _("The port you specified ('%s') can not "
+                     "be found. Please specify one of the ports "
+                     "found by 'gphoto2 --list-ports' make sure "
+                     "the speilling is correct (i.e. with prefix "
+                     "'serial:' or 'usb:')."), sPort);
+         g_fprintf(stderr, "\n");
+         goto error;
+      } else if (p < 0) {
+         ret = i;
+         goto error;
+      } else {
+         ret = gp_port_info_list_get_info(il, i, &info);
+         if (ret != 0) {
+            goto error;
+         }
+
+         ret = gp_camera_set_port_info (p->camera, info);
+         if (ret != 0) {
+            goto error;
+         }
+
+         gp_setting_set("gphoto2", "port", info.path);
+
+         gp_port_info_list_free(il);
+      }
+   }
+
    p->context = gp_context_new();
 
    p->dirs = g_hash_table_new_full(g_str_hash, g_str_equal,
@@ -478,6 +525,11 @@ gphotofs_init(void)
    return p;
 
  error:
+   if (ret != GP_OK) {
+      g_fprintf(stderr, _("Error initialising gphotofs: %s"),
+                gp_result_as_string(ret));
+      g_fprintf(stderr, "\n");
+   }
    exit(EXIT_FAILURE);
 }
 
@@ -549,8 +601,6 @@ main(int argc,
       const char *fusehelp[] = { g_get_prgname(), "-ho", NULL};
 
       return fuse_main(2, (char **)fusehelp, &gphotofs_oper);
-   } else if (sPort) {
-      g_fprintf(stderr, "--port is not yet implemented\n");
    } else if (sUsbid) {
       g_fprintf(stderr, "--usbid is not yet implemented\n");
    } else {

@@ -34,11 +34,10 @@ libgphoto2 >= 2.1 (Maybe one can go further back but I haven't tried).
 How to mount a filesystem
 -------------------------
 
-Right now, GPhotoFS has no special command line parameters; all you
-do is run it and give it a mount point. It relies on libgphoto2 to
-autodect your camera. So if the gphoto2 tool Just Works(tm) then 
-GPhotoFS will work too. I will eventually add support for specifying
-the camera/port in the same way that gphoto2 does.
+GPhotoFS implements the same model/port/speed/usbid command line
+options that gphoto2 does, so you can use them to fine tune your
+choice of camera - but for most people, the autodetection will
+Just Work(tm) -  all you do is run it and give it a mount point.
 
 So, just do:
 

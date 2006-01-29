@@ -1,3 +1,8 @@
+2006-01-29  Philip Langdale  <philipl@mail.utexas.edu>
+
+	* gphotofs.c: (main) (gphotofs_init).
+	Implement --port support.
+
 2006-01-12  Philip Langdale  <philipl@mail.utexas.edu>
 
 	* gphotofs.c: (main) (gphotofs_init).
