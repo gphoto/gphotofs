@@ -9,7 +9,7 @@ or some other custom protocol. But as long as the camera is supported
 by libgphoto2, it can be mounted as a filesystem using this program.
 
 As libgphoto2 is a userspace library for interacting with cameras,
-it is natural that if one to build a filesystem ontop of it, one
+it is natural that if one is to build a filesystem ontop of it, one
 should use FUSE, and that is what I have done.
 
 Getting it

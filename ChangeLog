@@ -1,3 +1,7 @@
+2006-05-27  Philip Langdale  <philipl@mail.utexas.edu>
+
+	* README: Fix a typo and test svn commit.
+
 2006-01-29  Philip Langdale  <philipl@mail.utexas.edu>
 
 	* gphotofs.c: (main) (gphotofs_init).
