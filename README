@@ -15,11 +15,11 @@ should use FUSE, and that is what I have done.
 Getting it
 ----------
 
-For now, releases are available at:
+Releases are available at:
 
-   http://intr.overt.org/gphotofs
+   http://www.gphoto.org/
 
-and the current source is available in the gphoto project's cvs
+and the current source is available in the gphoto project's svn
 repository:
 
    http://sourceforge.net/projects/gphoto
@@ -34,10 +34,12 @@ libgphoto2 >= 2.1 (Maybe one can go further back but I haven't tried).
 How to mount a filesystem
 -------------------------
 
-GPhotoFS implements the same model/port/speed/usbid command line
+GPhotoFS implements the same model/port/speed command line
 options that gphoto2 does, so you can use them to fine tune your
 choice of camera - but for most people, the autodetection will
 Just Work(tm) -  all you do is run it and give it a mount point.
+
+(The --usbid option is not yet supported, but will be eventually).
 
 So, just do:
 
@@ -77,6 +79,13 @@ You cannot:
     you try to do anything. Unmount and remount the filesystem
     and you'll be back in business.
 
+Experimental write support
+--------------------------
+
+Write support is available from the 'gphotofs-write' branch in subversion.
+Brave souls (or those who have backed up the contents of their phones or
+media players) can try it out.
+
 Acknowledgements
 ----------------
 
@@ -92,4 +101,4 @@ http://www.hep.phy.cam.ac.uk/~lester/gphoto2-fuse-fs/
 Contact info
 ------------
 
-Philip Langdale <philipl@mail.utexas.edu>
+Philip Langdale <philipl@alumni.utexas.net>

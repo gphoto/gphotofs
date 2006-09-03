@@ -1,5 +1,12 @@
 2006-09-03  Philip Langdale  <philipl@alumni.utexas.net>
 
+	* AUTHORS
+	* README
+	* configure.ac: Update for the 0.3 release and
+	make sure my contact information is accurate.
+
+2006-09-03  Philip Langdale  <philipl@alumni.utexas.net>
+
 	* gphotofs.c: (gphotofs_init).
 	Fix --model to actually work. I needed to load
 	the abilities list before it would be useful...
