@@ -419,8 +419,12 @@ gphotofs_init(void)
    int ret = GP_OK;
    GPCtx *p = g_new0(GPCtx, 1);
 
+   p->context = gp_context_new();
+
    gp_camera_new(&p->camera);
+
    gp_abilities_list_new(&p->abilities);
+   gp_abilities_list_load(p->abilities, p->context);
 
    if (sSpeed) {
       GPPortInfo info;
@@ -512,8 +516,6 @@ gphotofs_init(void)
          gp_port_info_list_free(il);
       }
    }
-
-   p->context = gp_context_new();
 
    p->dirs = g_hash_table_new_full(g_str_hash, g_str_equal,
                                    g_free, g_free);
