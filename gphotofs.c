@@ -434,7 +434,7 @@ gphotofs_init(void)
       if (ret != 0) {
          goto error;
       } else if (info.type != GP_PORT_SERIAL) {
-         g_fprintf(stderr, "%s\n", _("You can only specify speeds for serial ports."));
+         fprintf(stderr, "%s\n", _("You can only specify speeds for serial ports."));
          goto error;
       }
 
@@ -451,8 +451,8 @@ gphotofs_init(void)
 
       m = gp_abilities_list_lookup_model(p->abilities, sModel);
       if (m < 0) {
-         g_fprintf(stderr, _("Model %s was not recognised."), sModel);
-         g_fprintf(stderr, "\n");
+         fprintf(stderr, _("Model %s was not recognised."), sModel);
+         fprintf(stderr, "\n");
          goto error;
       }
 
@@ -489,13 +489,13 @@ gphotofs_init(void)
 
       i = gp_port_info_list_lookup_path(il, sPort);
       if (i == GP_ERROR_UNKNOWN_PORT) {
-         g_fprintf(stderr,
+         fprintf(stderr,
                    _("The port you specified ('%s') can not "
                      "be found. Please specify one of the ports "
                      "found by 'gphoto2 --list-ports' make sure "
                      "the speilling is correct (i.e. with prefix "
                      "'serial:' or 'usb:')."), sPort);
-         g_fprintf(stderr, "\n");
+         fprintf(stderr, "\n");
          goto error;
       } else if (p < 0) {
          ret = i;
@@ -528,9 +528,9 @@ gphotofs_init(void)
 
  error:
    if (ret != GP_OK) {
-      g_fprintf(stderr, _("Error initialising gphotofs: %s"),
+      fprintf(stderr, _("Error initialising gphotofs: %s"),
                 gp_result_as_string(ret));
-      g_fprintf(stderr, "\n");
+      fprintf(stderr, "\n");
    }
    exit(EXIT_FAILURE);
 }
@@ -599,12 +599,12 @@ main(int argc,
    g_option_context_parse(context, &argc, &argv, &error);
 
    if (sHelp) {
-      guint i;
       const char *fusehelp[] = { g_get_prgname(), "-ho", NULL};
 
       return fuse_main(2, (char **)fusehelp, &gphotofs_oper);
    } else if (sUsbid) {
-      g_fprintf(stderr, "--usbid is not yet implemented\n");
+      fprintf(stderr, "--usbid is not yet implemented\n");
+      return 1;
    } else {
       return fuse_main(argc, argv, &gphotofs_oper);
    }
