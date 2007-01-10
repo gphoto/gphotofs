@@ -1,8 +1,9 @@
 AC_PREREQ(2.59)
-AC_INIT([gphoto filesystem], [0.3.0.trunk.2], [gphoto-devel@lists.sourceforge.net], [gphotofs])
+AC_INIT([gphoto filesystem], [0.3.0.trunk.3], [gphoto-devel@lists.sourceforge.net], [gphotofs])
 AC_CONFIG_SRCDIR([gphotofs.c])
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_MACRO_DIR([m4m])
+AC_CONFIG_AUX_DIR([auto-aux])
+dnl AC_CONFIG_MACRO_DIR([auto-m4])
 AM_INIT_AUTOMAKE([gnu 1.8 dist-bzip2])
 
 if test ! -d "$srcdir/m4m"; then
