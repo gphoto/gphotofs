@@ -12,7 +12,7 @@
 
 #include <fuse.h>
 
-#include <gphoto2.h>
+#include <gphoto2/gphoto2.h>
 
 #include <glib.h>
 #include <glib/gi18n.h>
