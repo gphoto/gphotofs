@@ -1,3 +1,8 @@
+2007-01-10  Philip Langdale  <philipl@alumni.utexas.net>
+
+	(merged by Marcus)
+	* gphotofs.c: added rmdir/mkdir from write branch.
+
 2006-09-03  Philip Langdale  <philipl@alumni.utexas.net>
 
 	* AUTHORS

@@ -32,7 +32,7 @@ static gchar *sPort = NULL;
 static gchar *sModel = NULL;
 static gchar *sUsbid = NULL;
 static gint sSpeed = 0;
-static gboolean sHelp;
+static gboolean sHelp, sDebug;
 
 /*
  * The OpenFile struct encapsulates a CameraFile and an open count.
@@ -414,6 +414,48 @@ gphotofs_unlink(const char *path)
 
 }
 
+static int gphotofs_mkdir(const char *path, mode_t mode)
+{
+    int ret = 0;
+
+    GPCtx *p = (GPCtx *)fuse_get_context()->private_data;
+    gchar *dir = g_path_get_dirname(path);
+    gchar *file = g_path_get_basename(path);
+
+    ret = gp_camera_folder_make_dir(p->camera, dir, file, p->context);
+    if (ret != 0) {
+       ret = gpresultToErrno(ret);
+    }
+
+    g_free(dir);
+    g_free(file);
+
+    return ret;
+}
+
+static int gphotofs_rmdir(const char *path)
+{
+    int ret = 0;
+
+    GPCtx *p = (GPCtx *)fuse_get_context()->private_data;
+    gchar *dir = g_path_get_dirname(path);
+    gchar *file = g_path_get_basename(path);
+
+    ret = gp_camera_folder_remove_dir(p->camera, dir, file, p->context);
+    if (ret != 0) {
+       ret = gpresultToErrno(ret);
+    }
+
+	g_hash_table_remove(p->dirs, path);
+
+    g_free(dir);
+    g_free(file);
+
+    return ret;
+}
+
+
+
 static void *
 gphotofs_init(void)
 {
@@ -577,10 +619,14 @@ static struct fuse_operations gphotofs_oper = {
     .read	= gphotofs_read,
     .release	= gphotofs_release,
     .unlink	= gphotofs_unlink,
+
+    .mkdir	= gphotofs_mkdir,
+    .rmdir	= gphotofs_rmdir,
 };
 
 static GOptionEntry options[] =
 {
+   { "debug", 0, 0, G_OPTION_ARG_NONE, &sDebug, N_("Enable debug"), NULL },
    { "port", 0, 0, G_OPTION_ARG_STRING, &sPort, N_("Specify port device"), "path" },
    { "speed", 0, 0, G_OPTION_ARG_INT, &sSpeed, N_("Specify serial transfer speed"), "speed" },
    { "camera", 0, 0, G_OPTION_ARG_STRING, &sModel, N_("Specify camera model"), "model" },
