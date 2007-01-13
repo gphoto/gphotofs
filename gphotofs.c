@@ -425,8 +425,18 @@ static int gphotofs_mkdir(const char *path, mode_t mode)
     ret = gp_camera_folder_make_dir(p->camera, dir, file, p->context);
     if (ret != 0) {
        ret = gpresultToErrno(ret);
-    }
+    } else {
+       struct stat *stbuf;	
 
+       stbuf = g_new0(struct stat, 1);
+       stbuf->st_mode = S_IFDIR | 0555;
+       /* This is not a correct number in general. */
+       stbuf->st_nlink = 2;
+       stbuf->st_uid = getuid();
+       stbuf->st_gid = getgid();
+       g_hash_table_replace(p->dirs, g_strdup (path), stbuf);
+
+    }
     g_free(dir);
     g_free(file);
 
@@ -446,7 +456,7 @@ static int gphotofs_rmdir(const char *path)
        ret = gpresultToErrno(ret);
     }
 
-	g_hash_table_remove(p->dirs, path);
+    g_hash_table_remove(p->dirs, path);
 
     g_free(dir);
     g_free(file);
