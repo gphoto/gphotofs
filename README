@@ -62,14 +62,12 @@ You can:
 - Move files (Read + delete)
 - Use 'du' to measure file size
 - Mount the filesystem before plugging in a camera.
+- Add/Remove directories
+- Add (upload) files.
 
 You cannot:
-- Add/Remove directories
+- Modify files still has some problems.
 - Rename files/directories
-- Add or modify files
-  - All of these are supported by libgphoto2, but only if the camera
-    supports them. As my silly Canon doesn't support these operations,
-    I cannot implement them effectively.
 - Get free space information
   - This one seems to be very much at the mercy of the camera
     manufacturer. I don't know if it'll ever be possible in a
@@ -78,13 +76,6 @@ You cannot:
   - The backend gets confused and you'll just get errors when
     you try to do anything. Unmount and remount the filesystem
     and you'll be back in business.
-
-Experimental write support
---------------------------
-
-Write support is available from the 'gphotofs-write' branch in subversion.
-Brave souls (or those who have backed up the contents of their phones or
-media players) can try it out.
 
 Acknowledgements
 ----------------
@@ -102,3 +93,4 @@ Contact info
 ------------
 
 Philip Langdale <philipl@alumni.utexas.net>
+Marcus Meissner <marcus@jet.franken.de>

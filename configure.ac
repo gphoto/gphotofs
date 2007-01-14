@@ -1,5 +1,5 @@
 AC_PREREQ(2.59)
-AC_INIT([gphoto filesystem], [0.3.0.trunk.3], [gphoto-devel@lists.sourceforge.net], [gphotofs])
+AC_INIT([gphoto filesystem], [0.3.0.trunk.4], [gphoto-devel@lists.sourceforge.net], [gphotofs])
 AC_CONFIG_SRCDIR([gphotofs.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR([auto-aux])
