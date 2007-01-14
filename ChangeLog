@@ -1,3 +1,15 @@
+2007-01-14  Marcus Meissner  <marcus@jet.franken.de>
+
+	* gphotofs.c: Fixed the bugs in the upload code.
+	  
+	  Upload is working now (needs latest libgphoto2 SVN
+	  trunk for working PTP2 driver).
+
+2007-01-14  Philip Langdale  <philipl@alumni.utexas.net>
+
+	(merged by Marcus)
+	* gphotofs.c: Merged the write code.
+
 2007-01-10  Philip Langdale  <philipl@alumni.utexas.net>
 
 	(merged by Marcus)
