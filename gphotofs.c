@@ -339,7 +339,9 @@ gphotofs_open(const char *path,
       } else {
 	 openFile->count++;
       }
-   } else if ((fi->flags & 3) == O_WRONLY) {
+      return 0;
+   }
+   if ((fi->flags & 3) == O_WRONLY) {
       openFile = g_hash_table_lookup(p->writes, path);
       if (!openFile) {
 	 gchar *dir = g_path_get_dirname(path);
@@ -362,10 +364,9 @@ gphotofs_open(const char *path,
       } else {
 	 openFile->count++;
       }
-   } else {
-      return -1;
+      return 0;
    }
-   return 0;
+   return -EINVAL;
 }
 
 static int
