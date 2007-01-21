@@ -35,7 +35,7 @@ static gchar *sUsbid = NULL;
 static gint sSpeed = 0;
 static gboolean sHelp;
 
-struct timeval glob_tv_zero;
+static struct timeval glob_tv_zero;
 
 /*
  * The OpenFile struct encapsulates a CameraFile and an open count.
@@ -463,8 +463,9 @@ gphotofs_rmdir(const char *path)
     ret = gp_camera_folder_remove_dir(p->camera, dir, file, p->context);
     if (ret != 0) {
        ret = gpresultToErrno(ret);
+    } else {
+       g_hash_table_remove(p->dirs, path);
     }
-    g_hash_table_remove(p->dirs, path);
     g_free(dir);
     g_free(file);
     return ret;
@@ -558,6 +559,11 @@ static int gphotofs_chown(const char *path, uid_t uid, gid_t gid)
     return 0;
 }
 
+static int gphotofs_statfs(const char *path, struct statvfs *stvfs)
+{
+    return 0;
+}
+
 static int
 gphotofs_release(const char *path,
                  struct fuse_file_info *fi)
@@ -603,7 +609,6 @@ gphotofs_unlink(const char *path)
    }
 
    g_hash_table_remove(p->files, path);
-
  exit:
    g_free(dir);
    g_free(file);
@@ -630,10 +635,11 @@ debug_func (GPLogLevel level, const char *domain, const char *format,
    fprintf (logfile, "%li.%06li %s(%i): ", sec, usec, domain, level);
    vfprintf (logfile, format, args);
    fputc ('\n', logfile);
+   fflush (logfile);
 }
 
 static void *
-gphotofs_init(void)
+gphotofs_init(struct fuse_conn_info *conn)
 {
    int ret = GP_OK;
    GPCtx *p = g_new0(GPCtx, 1);
@@ -642,12 +648,13 @@ gphotofs_init(void)
    int fd = -1;
    FILE *f = NULL;
 
-   fd = open("/tmp/gpfs.log",O_WRONLY|O_CREAT|O_EXCL,0600);
+   fd = open("/tmp/gpfs.log",O_WRONLY|O_CREAT,0600);
    if (fd != -1) {
       f = fdopen(fd,"a");
       if (f)
          p->debug_func_id = gp_log_add_func (GP_LOG_ALL, debug_func, (void *) f);
    }
+   fprintf (f, "log opened on pid %d\n", getpid());
 #endif
 
    p->context = gp_context_new();
@@ -811,15 +818,17 @@ static struct fuse_operations gphotofs_oper = {
     .release	= gphotofs_release,
     .unlink	= gphotofs_unlink,
 
-    .write     = gphotofs_write,
+    .write	= gphotofs_write,
     .mkdir	= gphotofs_mkdir,
     .rmdir	= gphotofs_rmdir,
-    .mknod     = gphotofs_mknod,
-    .flush     = gphotofs_flush,
-    .fsync     = gphotofs_fsync,
+    .mknod	= gphotofs_mknod,
+    .flush	= gphotofs_flush,
+    .fsync	= gphotofs_fsync,
 
-    .chmod      = gphotofs_chmod,
-    .chown      = gphotofs_chown,
+    .chmod	= gphotofs_chmod,
+    .chown	= gphotofs_chown,
+
+    .statfs	= gphotofs_statfs
 };
 
 static GOptionEntry options[] =
@@ -836,6 +845,10 @@ main(int argc,
      char *argv[])
 {
    GError *error = NULL;
+   struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
+   char *mountpoint;
+   struct fuse_chan *ch;
+   int err = -1;
 
    GOptionContext *context = g_option_context_new(_("- gphoto filesystem"));
    g_option_context_add_main_entries(context, options, GETTEXT_PACKAGE);
@@ -845,11 +858,28 @@ main(int argc,
    if (sHelp) {
       const char *fusehelp[] = { g_get_prgname(), "-ho", NULL};
 
-      return fuse_main(2, (char **)fusehelp, &gphotofs_oper);
+      return fuse_main(2, (char **)fusehelp, &gphotofs_oper, NULL);
    } else if (sUsbid) {
       g_fprintf(stderr, "--usbid is not yet implemented\n");
       return 1;
    } else {
-      return fuse_main(argc, argv, &gphotofs_oper);
+     int foreground;
+     /* do not call fuse_main, we will a single threaded loop! */
+     if (fuse_parse_cmdline(&args, &mountpoint, NULL, &foreground) != -1 &&
+       (ch = fuse_mount(mountpoint, &args)) != NULL) {
+       struct fuse *xfuse;
+
+       xfuse = fuse_new(ch, &args, &gphotofs_oper, sizeof(gphotofs_oper), NULL);
+       if (xfuse != NULL) {
+	 fuse_daemonize (foreground);
+         if (fuse_set_signal_handlers(fuse_get_session(xfuse)) != -1) {
+           err = fuse_loop(xfuse);
+           fuse_remove_signal_handlers(fuse_get_session(xfuse));
+         }
+         fuse_teardown(xfuse, mountpoint);
+       }
+     }
+     fuse_opt_free_args(&args);
+     return err ? 1 : 0;
    }
 }
