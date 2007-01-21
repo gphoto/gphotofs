@@ -1,3 +1,14 @@
+2007-01-21  Marcus Meissner  <marcus@jet.franken.de>
+
+	* gphotofs.c:
+	  - Use single threaded loop (libgphoto2 cannot cope
+	    being accessed multithread currently).
+
+	  - Needed to use fuse version 2.6 for this (all
+	    others fail one way or the other).
+
+	  - basic statfs support.
+
 2007-01-14  Marcus Meissner  <marcus@jet.franken.de>
 
 	* gphotofs.c: Fixed the bugs in the upload code.

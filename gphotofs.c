@@ -561,7 +561,26 @@ static int gphotofs_chown(const char *path, uid_t uid, gid_t gid)
 
 static int gphotofs_statfs(const char *path, struct statvfs *stvfs)
 {
-    return 0;
+   GPCtx *p = (GPCtx *)fuse_get_context()->private_data;
+   CameraStorageInformation *sifs;
+   int res, nrofsifs;
+
+   res = gp_camera_get_storageinfo (p->camera, &sifs, &nrofsifs, p->context);
+   if (res < GP_OK)
+      return gpresultToErrno(res);
+   if (nrofsifs == 0)
+      return -ENOSYS;
+
+   if (nrofsifs == 1) {
+      stvfs->f_bsize = 1024;
+      stvfs->f_blocks = sifs->capacitykbytes;
+      stvfs->f_bfree = sifs->freekbytes;
+      stvfs->f_bavail = sifs->freekbytes;
+      stvfs->f_files = -1;
+      stvfs->f_ffree = -1;
+      stvfs->f_favail = -1;
+   }
+   return 0;
 }
 
 static int
