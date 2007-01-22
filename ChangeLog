@@ -11,6 +11,8 @@
 
 	  - charset is always utf-8, because thats what the kernel uses.
 
+	* configure.ac: 2.3.0.trunk.5
+
 2007-01-14  Marcus Meissner  <marcus@jet.franken.de>
 
 	* gphotofs.c: Fixed the bugs in the upload code.

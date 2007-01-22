@@ -64,14 +64,15 @@ You can:
 - Mount the filesystem before plugging in a camera.
 - Add/Remove directories
 - Add (upload) files.
-
-You cannot:
-- Modify files still has some problems.
-- Rename files/directories
 - Get free space information
   - This one seems to be very much at the mercy of the camera
     manufacturer. I don't know if it'll ever be possible in a
     general way.
+  (Depends on gp_camera_get_storageinfo()).
+
+You cannot:
+- Modify files still has some problems.
+- Rename files/directories
 - Unplug and replug a camera and expect things to keep working.
   - The backend gets confused and you'll just get errors when
     you try to do anything. Unmount and remount the filesystem
