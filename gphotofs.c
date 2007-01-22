@@ -679,6 +679,8 @@ gphotofs_init(struct fuse_conn_info *conn)
    p->context = gp_context_new();
    gettimeofday (&glob_tv_zero, NULL);
 
+   setlocale (LC_CTYPE,"en_US.UTF-8"); /* for ptp2 driver to convert to utf-8 */
+
    gp_camera_new (&p->camera);
 
    gp_abilities_list_new(&p->abilities);
