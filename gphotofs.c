@@ -658,7 +658,7 @@ debug_func (GPLogLevel level, const char *domain, const char *format,
 }
 
 static void *
-gphotofs_init(struct fuse_conn_info *conn)
+gphotofs_init()
 {
    int ret = GP_OK;
    GPCtx *p = g_new0(GPCtx, 1);
@@ -866,10 +866,6 @@ main(int argc,
      char *argv[])
 {
    GError *error = NULL;
-   struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
-   char *mountpoint;
-   struct fuse_chan *ch;
-   int err = -1;
 
    GOptionContext *context = g_option_context_new(_("- gphoto filesystem"));
    g_option_context_add_main_entries(context, options, GETTEXT_PACKAGE);
@@ -877,30 +873,18 @@ main(int argc,
    g_option_context_parse(context, &argc, &argv, &error);
 
    if (sHelp) {
-      const char *fusehelp[] = { g_get_prgname(), "-ho", NULL};
+      const char *fusehelp[] = { argv[0], "-ho", NULL};
 
-      return fuse_main(2, (char **)fusehelp, &gphotofs_oper, NULL);
+      return fuse_main(2, (char **)fusehelp, &gphotofs_oper);
    } else if (sUsbid) {
       g_fprintf(stderr, "--usbid is not yet implemented\n");
       return 1;
    } else {
-     int foreground;
-     /* do not call fuse_main, we will a single threaded loop! */
-     if (fuse_parse_cmdline(&args, &mountpoint, NULL, &foreground) != -1 &&
-       (ch = fuse_mount(mountpoint, &args)) != NULL) {
-       struct fuse *xfuse;
+     char **newargv = malloc ( (argc+2)*sizeof(char*));
+     memcpy (newargv+2,argv+1,sizeof(char*)*(argc-1));
+     newargv[0] = argv[0];
+     newargv[1] = "-s"; /* disable multithreading */
 
-       xfuse = fuse_new(ch, &args, &gphotofs_oper, sizeof(gphotofs_oper), NULL);
-       if (xfuse != NULL) {
-	 fuse_daemonize (foreground);
-         if (fuse_set_signal_handlers(fuse_get_session(xfuse)) != -1) {
-           err = fuse_loop(xfuse);
-           fuse_remove_signal_handlers(fuse_get_session(xfuse));
-         }
-         fuse_teardown(xfuse, mountpoint);
-       }
-     }
-     fuse_opt_free_args(&args);
-     return err ? 1 : 0;
+     return fuse_main(argc+1, newargv, &gphotofs_oper);
    }
 }

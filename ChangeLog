@@ -1,3 +1,10 @@
+2007-01-24  Marcus Meissner  <marcus@jet.franken.de>
+
+	* gphotofs.c: Rev down to fuse 2.5 requirement,
+	  inject -s instead.
+
+	* configure.ac: 2.3.0.trunk.5
+
 2007-01-21  Marcus Meissner  <marcus@jet.franken.de>
 
 	* gphotofs.c:
@@ -10,8 +17,6 @@
 	  - basic statfs support.
 
 	  - charset is always utf-8, because thats what the kernel uses.
-
-	* configure.ac: 2.3.0.trunk.5
 
 2007-01-14  Marcus Meissner  <marcus@jet.franken.de>
 

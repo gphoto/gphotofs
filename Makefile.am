@@ -10,7 +10,7 @@ bin_PROGRAMS = gphotofs
 gphotofs_SOURCES = gphotofs.c
 gphotofs_CPPFLAGS = \
 	$(AM_CPPFLAGS) $(CPPFLAGS) \
-	-DFUSE_USE_VERSION=26 $(FUSE_CFLAGS) \
+	-DFUSE_USE_VERSION=25 $(FUSE_CFLAGS) \
 	$(GLIB_CFLAGS) \
 	$(LIBGPHOTO2_CFLAGS)
 gphotofs_LDADD = \
