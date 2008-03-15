@@ -1,5 +1,5 @@
 AC_PREREQ(2.59)
-AC_INIT([gphoto filesystem], [0.3.0.trunk.5], [gphoto-devel@lists.sourceforge.net], [gphotofs])
+AC_INIT([gphoto filesystem], [0.3.0.trunk.6], [gphoto-devel@lists.sourceforge.net], [gphotofs])
 AC_CONFIG_SRCDIR([gphotofs.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR([auto-aux])
@@ -39,7 +39,7 @@ PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.6])
 AC_SUBST([GLIB_CFLAGS])
 AC_SUBST([GLIB_LIBS])
 
-GP_CHECK_LIBRARY([LIBGPHOTO2], [libgphoto2], [>= 2.3.0])
+GP_CHECK_LIBRARY([LIBGPHOTO2], [libgphoto2], [>= 2.4.0.5])
 
 ALL_LINGUAS=""
 GETTEXT_PACKAGE="gphotofs"

@@ -687,13 +687,15 @@ gphotofs_init()
    gp_abilities_list_load(p->abilities, p->context);
 
    if (sSpeed) {
-      GPPortInfo info;
+      GPPortInfo	info;
+      GPPortType	type;
 
       /* Make sure we've got a serial port. */
       ret = gp_camera_get_port_info(p->camera, &info);
+      gp_port_info_get_type (info, &type);
       if (ret != 0) {
          goto error;
-      } else if (info.type != GP_PORT_SERIAL) {
+      } else if (type != GP_PORT_SERIAL) {
          g_fprintf(stderr, "%s\n", _("You can only specify speeds for serial ports."));
          goto error;
       }
@@ -726,6 +728,7 @@ gphotofs_init()
          goto error;
       }
 
+      /* Marcus: why save it? puzzling. */
       ret = gp_setting_set("gphoto2", "model", a.model);
       if (ret != 0) {
          goto error;
@@ -753,7 +756,7 @@ gphotofs_init()
                    _("The port you specified ('%s') can not "
                      "be found. Please specify one of the ports "
                      "found by 'gphoto2 --list-ports' make sure "
-                     "the speilling is correct (i.e. with prefix "
+                     "the spelling is correct (i.e. with prefix "
                      "'serial:' or 'usb:')."), sPort);
          g_fprintf(stderr, "\n");
          goto error;
@@ -761,17 +764,18 @@ gphotofs_init()
          ret = i;
          goto error;
       } else {
+	 char *xpath;
          ret = gp_port_info_list_get_info(il, i, &info);
          if (ret != 0) {
             goto error;
          }
 
          ret = gp_camera_set_port_info (p->camera, info);
-         if (ret != 0) {
+         if (ret != 0)
             goto error;
-         }
-
-         gp_setting_set("gphoto2", "port", info.path);
+         /* Marcus: why save it? puzzling. */
+	 gp_port_info_get_path (info, &xpath);
+         gp_setting_set("gphoto2", "port", xpath);
 
          gp_port_info_list_free(il);
       }
