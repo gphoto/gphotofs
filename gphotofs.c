@@ -761,7 +761,7 @@ gphotofs_init()
                      "'serial:' or 'usb:')."), sPort);
          g_fprintf(stderr, "\n");
          goto error;
-      } else if (p < 0) {
+      } else if (i < 0) {
          ret = i;
          goto error;
       } else {
