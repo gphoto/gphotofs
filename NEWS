@@ -1,7 +1,17 @@
-What's new in 0.4
+What's new in 0.4.0.1
 -----------------
 
 - ported to work with new libgphoto2 2.5.0 and later
+
+What's new in 0.4
+-----------------
+
+- Statfs support
+- FUSE 2.6 API
+- Single threaded main loop
+- Write support
+- mkdir/rmdir
+
 
 What's new in 0.3
 -----------------
