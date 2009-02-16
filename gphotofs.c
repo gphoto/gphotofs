@@ -490,12 +490,7 @@ gphotofs_mknod(const char *path, mode_t mode, dev_t rdev)
       gp_file_unref (cfile);
       return -1;
    }
-   res = gp_file_set_name (cfile, file);
-   if (res < 0) {
-      gp_file_unref (cfile);
-      return -1;
-   }
-   res = gp_camera_folder_put_file (p->camera, dir, file, cfile,
+   res = gp_camera_folder_put_file (p->camera, dir, file, GP_FILE_TYPE_NORMAL, cfile,
 				    p->context);
    gp_file_unref (cfile);
    g_free(dir);
@@ -527,13 +522,8 @@ static int gphotofs_flush(const char *path, struct fuse_file_info *fi)
 	 gp_file_unref (file);
 	 return -1;
       }
-      res = gp_file_set_name (file, openFile->destname);
-      if (res < 0) {
-	 gp_file_unref (file);
-	 return -1;
-      }
       res = gp_camera_file_delete(p->camera, openFile->destdir, openFile->destname, p->context);
-      res = gp_camera_folder_put_file (p->camera, openFile->destdir, openFile->destname, file, p->context);
+      res = gp_camera_folder_put_file (p->camera, openFile->destdir, openFile->destname, GP_FILE_TYPE_NORMAL, file, p->context);
       if (res < 0)
 	 return -ENOSPC;
       gp_file_unref (file);
