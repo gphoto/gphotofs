@@ -19,10 +19,11 @@ Releases are available at:
 
    http://www.gphoto.org/
 
-and the current source is available in the gphoto project's svn
-repository:
+and the current source code is available in the gphoto project's
+github repository:
 
-   http://sourceforge.net/projects/gphoto
+   http://github.com/gphoto/gphotofs
+
 
 Requirements
 ------------
