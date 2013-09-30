@@ -2,7 +2,7 @@ AC_PREREQ(2.59)
 AC_INIT([gphoto filesystem], [0.5], [gphoto-devel@lists.sourceforge.net], [gphotofs])
 AC_CONFIG_SRCDIR([gphotofs.c])
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_MACRO_DIR([auto-m4])
+AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([auto-aux])
 AM_INIT_AUTOMAKE([gnu 1.9 dist-bzip2])
 
@@ -35,7 +35,7 @@ AM_GLIB_GNU_GETTEXT
 
 AC_CONFIG_FILES([
 Makefile
-m4/Makefile
+gphoto-m4/Makefile
 ])
 AC_OUTPUT
 GP_CONFIG_OUTPUT

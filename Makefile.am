@@ -1,8 +1,8 @@
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS = m4
+SUBDIRS = gphoto-m4
 
-ACLOCAL_AMFLAGS = -I auto-m4 -I m4
+ACLOCAL_AMFLAGS = -I m4 -I gphoto-m4
 
 EXTRA_DIST = test-gphotofs.sh
 
