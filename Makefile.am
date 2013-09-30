@@ -4,7 +4,7 @@ SUBDIRS = m4
 
 ACLOCAL_AMFLAGS = -I auto-m4 -I m4
 
-EXTRA_DIST = autogen.sh test-gphotofs.sh
+EXTRA_DIST = test-gphotofs.sh
 
 bin_PROGRAMS = gphotofs
 gphotofs_SOURCES = gphotofs.c
