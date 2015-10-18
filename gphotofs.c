@@ -212,7 +212,15 @@ gphotofs_readdir(const char *path,
       }
 
       stbuf = g_new0(struct stat, 1);
-      stbuf->st_mode = S_IFREG | 0644;
+      stbuf->st_mode = S_IFREG;
+      if (info.file.fields & GP_FILE_INFO_PERMISSIONS) {
+         if (info.file.permissions & GP_FILE_PERM_DELETE)
+            stbuf->st_mode |= 0644;
+         else
+            stbuf->st_mode |= 0444;
+      } else {
+         stbuf->st_mode |= 0644;
+      }
       stbuf->st_nlink = 1;
       stbuf->st_uid = getuid();
       stbuf->st_gid = getgid();
