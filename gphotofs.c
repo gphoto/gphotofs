@@ -143,6 +143,19 @@ struct GPCtx {
 };
 typedef struct GPCtx GPCtx;
 
+/* Just quickly check for pending events */
+static void
+gphotofs_check_events() {
+    GPCtx *p = (GPCtx *)fuse_get_context()->private_data;
+    CameraEventType eventtype;
+    void *eventdata;
+
+    eventdata = NULL;
+    gp_camera_wait_for_event(p->camera, 1, &eventtype, &eventdata, p->context);
+    free (eventdata);
+    return;
+}
+
 static int
 gphotofs_readdir(const char *path,
                  void *buf,
@@ -154,6 +167,8 @@ gphotofs_readdir(const char *path,
    CameraList *list = NULL;
    int i;
    int ret = 0;
+
+   gphotofs_check_events();
 
    p = (GPCtx *)fuse_get_context()->private_data;
 
@@ -321,7 +336,7 @@ gphotofs_open(const char *path,
    GPCtx *p = (GPCtx *)fuse_get_context()->private_data;
    OpenFile *openFile;
 
-
+   gphotofs_check_events();
    if ((fi->flags & 3) == O_RDONLY) {
       openFile = g_hash_table_lookup(p->reads, path);
       if (!openFile) {
@@ -391,6 +406,7 @@ gphotofs_read(const char *path,
    unsigned long int dataSize;
    int ret;
 
+   gphotofs_check_events();
    openFile = g_hash_table_lookup(p->reads, path);
    ret = gp_file_get_data_and_size(openFile->file, &data, &dataSize);
    if (ret == 0) {
@@ -439,6 +455,7 @@ gphotofs_mkdir(const char *path, mode_t mode)
     gchar *dir = g_path_get_dirname(path);
     gchar *file = g_path_get_basename(path);
 
+    gphotofs_check_events();
     ret = gp_camera_folder_make_dir(p->camera, dir, file, p->context);
     if (ret != 0) {
        ret = gpresultToErrno(ret);
@@ -469,6 +486,7 @@ gphotofs_rmdir(const char *path)
     gchar *dir = g_path_get_dirname(path);
     gchar *file = g_path_get_basename(path);
 
+    gphotofs_check_events();
     ret = gp_camera_folder_remove_dir(p->camera, dir, file, p->context);
     if (ret != 0) {
        ret = gpresultToErrno(ret);
@@ -490,6 +508,7 @@ gphotofs_mknod(const char *path, mode_t mode, dev_t rdev)
    int res;
    CameraFile *cfile;
 
+    gphotofs_check_events();
    gp_file_new (&cfile);
    data = malloc(1);
    data[0] = 'c';
@@ -513,6 +532,7 @@ static int gphotofs_flush(const char *path, struct fuse_file_info *fi)
    GPCtx *p = (GPCtx *)fuse_get_context()->private_data;
    OpenFile *openFile = g_hash_table_lookup(p->writes, path);
 
+    gphotofs_check_events();
    if (!openFile)
       return 0;
    if (openFile->writing) {
@@ -564,6 +584,7 @@ static int gphotofs_statfs(const char *path, struct statvfs *stvfs)
    CameraStorageInformation *sifs;
    int res, nrofsifs;
 
+   gphotofs_check_events();
    res = gp_camera_get_storageinfo (p->camera, &sifs, &nrofsifs, p->context);
    if (res < GP_OK)
       return gpresultToErrno(res);
@@ -614,6 +635,7 @@ gphotofs_unlink(const char *path)
    gchar *file = g_path_get_basename(path);
    int ret = 0;
 
+   gphotofs_check_events();
    /* Don't allow deletion of open files. */
    if (g_hash_table_lookup(p->reads, path)) {
       ret = -EBUSY;
