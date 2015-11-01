@@ -4,7 +4,7 @@ os:
  - linux
 
 env:
- - EXTRALIBS="libusb-1.0-0-dev libgd2-xpm-dev fuse-dev"
+ - EXTRALIBS="libusb-1.0-0-dev libfuse-dev"
 
 before_install:
  - sudo apt-get update -qq
