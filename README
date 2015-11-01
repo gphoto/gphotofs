@@ -64,7 +64,7 @@ You can:
 - Use 'du' to measure file size
 - Mount the filesystem before plugging in a camera.
 - Add/Remove directories
-- Add (upload) files.
+- Add (upload) files (depends on camera used).
 - Get free space information
   - This one seems to be very much at the mercy of the camera
     manufacturer. I don't know if it'll ever be possible in a
