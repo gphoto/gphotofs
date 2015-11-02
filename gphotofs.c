@@ -150,9 +150,14 @@ gphotofs_check_events() {
     CameraEventType eventtype;
     void *eventdata;
 
-    eventdata = NULL;
-    gp_camera_wait_for_event(p->camera, 1, &eventtype, &eventdata, p->context);
-    free (eventdata);
+    do {
+	int ret;
+        eventdata = NULL;
+	ret = gp_camera_wait_for_event(p->camera, 1, &eventtype, &eventdata, p->context);
+	if (ret != GP_OK)
+	    break;
+        free (eventdata);
+    } while (eventtype != GP_EVENT_TIMEOUT);
     return;
 }
 
