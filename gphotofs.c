@@ -2,7 +2,7 @@
     FUSE Filesystem for libgphoto2.
     Copyright (C) 2005  Philip Langdale <philipl@mail.utexas.edu>
     Copyright (C) 2007  Marcus Meissner <marcus@jet.franken.de>
-    Copyright (C) 2015  Marcus Meissner <marcus@jet.franken.de>
+    Copyright (C) 2015,2017  Marcus Meissner <marcus@jet.franken.de>
 
     This program can be distributed under the terms of the GNU GPL.
     See the file COPYING.
