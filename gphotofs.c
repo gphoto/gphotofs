@@ -412,7 +412,7 @@ gphotofs_read(const char *path,
    unsigned long int dataSize;
    int ret;
 
-   gphotofs_check_events();
+   /* gphotofs_check_events(); ... probably on doing small reads this will take too much time */
    openFile = g_hash_table_lookup(p->reads, path);
    ret = gp_file_get_data_and_size(openFile->file, &data, &dataSize);
    if (ret == 0) {
