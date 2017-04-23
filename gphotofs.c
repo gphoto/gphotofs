@@ -144,12 +144,26 @@ struct GPCtx {
 };
 typedef struct GPCtx GPCtx;
 
+static int gphotofs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi);
+
+static int
+dummyfiller(void *buf, const char *name,
+            const struct stat *stbuf, off_t off
+) {
+   return 0;
+}
+
 /* Just quickly check for pending events */
 static void
 gphotofs_check_events() {
     GPCtx *p = (GPCtx *)fuse_get_context()->private_data;
     CameraEventType eventtype;
     void *eventdata;
+    static int ineventcheck = 0;
+
+    if (ineventcheck)
+	return;
+    ineventcheck = 1;
 
     do {
 	int ret;
@@ -157,8 +171,18 @@ gphotofs_check_events() {
 	ret = gp_camera_wait_for_event(p->camera, 1, &eventtype, &eventdata, p->context);
 	if (ret != GP_OK)
 	    break;
+	switch (eventtype) {
+	case GP_EVENT_FOLDER_ADDED:
+	case GP_EVENT_FILE_ADDED: {
+		CameraFilePath	*path = eventdata;
+
+		gphotofs_readdir(path->folder, NULL, dummyfiller, 0, NULL);
+		break;
+	}
+	}
         free (eventdata);
     } while (eventtype != GP_EVENT_TIMEOUT);
+    ineventcheck = 0;
     return;
 }
 
@@ -267,14 +291,6 @@ exit:
    ret = gpresultToErrno(ret);
    goto exit;
 }
-
-static int
-dummyfiller(void *buf, const char *name,
-            const struct stat *stbuf, off_t off
-) {
-   return 0;
-}
-
 
 static int
 gphotofs_getattr(const char *path,
@@ -410,12 +426,29 @@ gphotofs_read(const char *path,
    OpenFile *openFile;
    const char *data;
    unsigned long int dataSize;
+   char *dir, *fn;
+   uint64_t	xsize;
    int ret;
 
    /* gphotofs_check_events(); ... probably on doing small reads this will take too much time */
    openFile = g_hash_table_lookup(p->reads, path);
+
+   dir = g_path_get_dirname(path);
+   fn = g_path_get_basename(path);
+
+   xsize = size;
+   ret = gp_camera_file_read(p->camera, dir, fn, GP_FILE_TYPE_NORMAL, offset, buf, &xsize, p->context);
+
+   g_free(dir);
+   g_free(fn);
+   if (ret == GP_OK)
+      return xsize;
+   if (ret != GP_ERROR_NOT_SUPPORTED)
+      return gpresultToErrno(ret);
+   /* gp_camera_file_read NOTSUPPORTED -> fall back to old method */
+
    ret = gp_file_get_data_and_size(openFile->file, &data, &dataSize);
-   if (ret == 0) {
+   if (ret == GP_OK) {
       if (offset < dataSize) {
          if (offset + size > dataSize) {
             size = dataSize - offset;
@@ -664,11 +697,8 @@ gphotofs_unlink(const char *path)
 }
 
 static void
-#ifdef __GNUC__
-                __attribute__((__format__(printf,3,0)))
-#endif
-debug_func (GPLogLevel level, const char *domain, const char *format,
-            va_list args, void *data)
+debug_func (GPLogLevel level, const char *domain, const char *str,
+            void *data)
 {
    struct timeval tv;
    long sec, usec;
@@ -679,7 +709,7 @@ debug_func (GPLogLevel level, const char *domain, const char *format,
    usec = tv.tv_usec - glob_tv_zero.tv_usec;
    if (usec < 0) {sec--; usec += 1000000L;}
    fprintf (logfile, "%li.%06li %s(%i): ", sec, usec, domain, level);
-   vfprintf (logfile, format, args);
+   fprintf (logfile, "%s", str);
    fputc ('\n', logfile);
    fflush (logfile);
 }
