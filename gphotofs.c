@@ -920,6 +920,7 @@ static GOptionEntry options[] =
    { "camera", 0, 0, G_OPTION_ARG_STRING, &sModel, N_("Specify camera model"), "model" },
    { "usbid", 0, 0, G_OPTION_ARG_STRING, &sUsbid, N_("(expert only) Override USB IDs"), "usbid" },
    { "help-fuse", 'h', 0, G_OPTION_ARG_NONE, &sHelp, N_("Show FUSE help options"), NULL },
+   NULL
 };
 
 int
