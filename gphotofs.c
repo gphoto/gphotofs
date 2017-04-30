@@ -60,7 +60,8 @@ typedef struct OpenFile OpenFile;
 static void
 freeOpenFile(OpenFile *openFile)
 {
-   gp_file_unref(openFile->file);
+   if (openFile->file)
+      gp_file_unref(openFile->file);
    g_free(openFile);
 }
 
@@ -364,24 +365,17 @@ gphotofs_open(const char *path,
       if (!openFile) {
 	 gchar *dir = g_path_get_dirname(path);
 	 gchar *file = g_path_get_basename(path);
-	 CameraFile *cFile;
-	 int ret;
 
-	 gp_file_new(&cFile);
-	 ret = gp_camera_file_get(p->camera, dir, file, GP_FILE_TYPE_NORMAL,
-				  cFile, p->context);
+	 openFile = g_new0(OpenFile, 1);
+	 openFile->file = NULL;
+	 openFile->count = 1;
+	 openFile->destdir = g_strdup(dir);
+	 openFile->destname = g_strdup(file);
+	 g_hash_table_replace(p->reads, g_strdup(path), openFile);
+
 	 g_free(file);
 	 g_free(dir);
 
-	 if (ret != 0) {
-	    gp_file_unref (cFile);
-	    return gpresultToErrno(ret);
-         }
-
-	 openFile = g_new0(OpenFile, 1);
-	 openFile->file = cFile;
-	 openFile->count = 1;
-	 g_hash_table_replace(p->reads, g_strdup(path), openFile);
       } else {
 	 openFile->count++;
       }
@@ -426,26 +420,30 @@ gphotofs_read(const char *path,
    OpenFile *openFile;
    const char *data;
    unsigned long int dataSize;
-   char *dir, *fn;
    uint64_t	xsize;
    int ret;
 
    /* gphotofs_check_events(); ... probably on doing small reads this will take too much time */
    openFile = g_hash_table_lookup(p->reads, path);
 
-   dir = g_path_get_dirname(path);
-   fn = g_path_get_basename(path);
-
    xsize = size;
-   ret = gp_camera_file_read(p->camera, dir, fn, GP_FILE_TYPE_NORMAL, offset, buf, &xsize, p->context);
+   ret = gp_camera_file_read(p->camera, openFile->destdir, openFile->destname, GP_FILE_TYPE_NORMAL, offset, buf, &xsize, p->context);
 
-   g_free(dir);
-   g_free(fn);
    if (ret == GP_OK)
       return xsize;
    if (ret != GP_ERROR_NOT_SUPPORTED)
       return gpresultToErrno(ret);
    /* gp_camera_file_read NOTSUPPORTED -> fall back to old method */
+
+   if (!openFile->file) {
+      CameraFile *cFile;
+
+      gp_file_new(&cFile);
+      ret = gp_camera_file_get(p->camera, openFile->destdir, openFile->destname, GP_FILE_TYPE_NORMAL,
+				    cFile, p->context);
+
+      openFile->file = cFile;
+   }
 
    ret = gp_file_get_data_and_size(openFile->file, &data, &dataSize);
    if (ret == GP_OK) {
@@ -547,7 +545,7 @@ gphotofs_mknod(const char *path, mode_t mode, dev_t rdev)
    int res;
    CameraFile *cfile;
 
-    gphotofs_check_events();
+   gphotofs_check_events();
    gp_file_new (&cfile);
    data = malloc(1);
    data[0] = 'c';
