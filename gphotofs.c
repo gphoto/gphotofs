@@ -632,30 +632,35 @@ static int gphotofs_chown(const char *path, uid_t uid, gid_t gid)
 
 static int gphotofs_statfs(const char *path, struct statvfs *stvfs)
 {
-   GPCtx *p = (GPCtx *)fuse_get_context()->private_data;
-   CameraStorageInformation *sifs;
-   int ret, nrofsifs;
+    GPCtx *p = (GPCtx *)fuse_get_context()->private_data;
+    CameraStorageInformation *sifs;
+    CameraStorageInformation *si;
+    int ret, nrofsifs;
 
-   ret = gphotofs_check_events();
-   if (ret == GP_ERROR_IO_USB_FIND || ret == GP_ERROR_MODEL_NOT_FOUND)
-       return gpresultToErrno(ret);
+    ret = gphotofs_check_events();
+    if (ret == GP_ERROR_IO_USB_FIND || ret == GP_ERROR_MODEL_NOT_FOUND)
+        return gpresultToErrno(ret);
 
-   ret = gp_camera_get_storageinfo (p->camera, &sifs, &nrofsifs, p->context);
-   if (ret < GP_OK)
-      return gpresultToErrno(ret);
-   if (nrofsifs == 0)
-      return -ENOSYS;
+    ret = gp_camera_get_storageinfo (p->camera, &sifs, &nrofsifs, p->context);
+    if (ret < GP_OK)
+        return gpresultToErrno(ret);
+    if (nrofsifs == 0)
+        return -ENOSYS;
 
-   if (nrofsifs == 1) {
-      stvfs->f_bsize = 1024;
-      stvfs->f_blocks = sifs->capacitykbytes;
-      stvfs->f_bfree = sifs->freekbytes;
-      stvfs->f_bavail = sifs->freekbytes;
-      stvfs->f_files = -1;
-      stvfs->f_ffree = -1;
-      stvfs->f_favail = -1;
-   }
-   return 0;
+    stvfs->f_bsize = 1024;
+    stvfs->f_frsize = 1024;
+
+    for (int i=0; i < nrofsifs; i++) {
+        si = (sifs) + i;
+        if (!si)
+            continue;
+        stvfs->f_blocks += si->capacitykbytes;
+        stvfs->f_bfree += si->freekbytes;
+        stvfs->f_bavail += si->freekbytes;
+    }
+    if (sifs)
+        free(sifs);
+    return 0;
 }
 
 static int
