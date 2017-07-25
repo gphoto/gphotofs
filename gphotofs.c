@@ -192,6 +192,10 @@ gphotofs_check_events() {
                 gphotofs_readdir(path->folder, NULL, dummyfiller, 0, NULL);
                 break;
             }
+            case GP_EVENT_UNKNOWN:
+            case GP_EVENT_TIMEOUT:
+            case GP_EVENT_CAPTURE_COMPLETE:
+                break;
         }
         free(eventdata);
     } while (eventtype != GP_EVENT_TIMEOUT);
@@ -726,6 +730,7 @@ gphotofs_unlink(const char *path)
 
 }
 
+#if 0
 static void
 debug_func (GPLogLevel level, const char *domain, const char *str,
             void *data)
@@ -743,6 +748,7 @@ debug_func (GPLogLevel level, const char *domain, const char *str,
    fputc ('\n', logfile);
    fflush (logfile);
 }
+#endif
 
 
 /* Find and try to connect to a device */
@@ -753,7 +759,7 @@ gphotofs_connect()
    GPCtx *p = g_new0(GPCtx, 1);
    sGPGlobalCtx = p;
 
-    #if 0 /* enable for debugging */
+#if 0 /* enable for debugging */
         int fd = -1;
         FILE *f = NULL;
 
@@ -764,7 +770,7 @@ gphotofs_connect()
                 p->debug_func_id = gp_log_add_func (GP_LOG_ALL, debug_func, (void *) f);
         }
         fprintf(f, "log opened on pid %d\n", getpid());
-    #endif
+#endif
 
     p->context = gp_context_new();
     gettimeofday(&glob_tv_zero, NULL);
@@ -883,7 +889,7 @@ gphotofs_connect()
 
         if (nrofsifs == 0) {
             ret = GP_ERROR_IO_USB_FIND;
-            g_fprintf(stderr, _("Could not retrieve device storage. Make sure that the device is unlocked."), sModel);
+            g_fprintf(stderr, _("Could not retrieve device storage. Make sure that the device %s is unlocked."), sModel);
             g_fprintf(stderr, "\n");
             break;
         }
