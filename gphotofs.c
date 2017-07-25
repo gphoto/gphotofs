@@ -28,16 +28,6 @@
 #include <fcntl.h>
 #include <sys/time.h>
 
-/*
- * Static variables set by command line arguments.
- */
-static gchar *sPort = NULL;
-static gchar *sModel = NULL;
-static gchar *sUsbid = NULL;
-static gint sSpeed = 0;
-static gboolean sHelp;
-
-static struct timeval glob_tv_zero;
 
 /*
  * The OpenFile struct encapsulates a CameraFile and an open count.
@@ -76,59 +66,63 @@ freeOpenFile(OpenFile *openFile)
 static int
 gpresultToErrno(int result)
 {
-   switch (result) {
-   case GP_ERROR:
-      return -EPROTO;
-   case GP_ERROR_BAD_PARAMETERS:
-      return -EINVAL;
-   case GP_ERROR_NO_MEMORY:
-      return -ENOMEM;
-   case GP_ERROR_LIBRARY:
-      return -ENOSYS;
-   case GP_ERROR_UNKNOWN_PORT:
-      return -ENXIO;
-   case GP_ERROR_NOT_SUPPORTED:
-      return -EPROTONOSUPPORT;
-   case GP_ERROR_TIMEOUT:
-      return -ETIMEDOUT;
-   case GP_ERROR_IO:
-   case GP_ERROR_IO_SUPPORTED_SERIAL:
-   case GP_ERROR_IO_SUPPORTED_USB:
-   case GP_ERROR_IO_INIT:
-   case GP_ERROR_IO_READ:
-   case GP_ERROR_IO_WRITE:
-   case GP_ERROR_IO_UPDATE:
-   case GP_ERROR_IO_SERIAL_SPEED:
-   case GP_ERROR_IO_USB_CLEAR_HALT:
-   case GP_ERROR_IO_USB_FIND:
-   case GP_ERROR_IO_USB_CLAIM:
-   case GP_ERROR_IO_LOCK:
-      return -EIO;
+    switch (result) {
+    case GP_OK:
+        return 0;
+    case GP_ERROR:
+        return -EPROTO;
+    case GP_ERROR_BAD_PARAMETERS:
+        return -EINVAL;
+    case GP_ERROR_NO_MEMORY:
+        return -ENOMEM;
+    case GP_ERROR_LIBRARY:
+        return -ENOSYS;
+    case GP_ERROR_UNKNOWN_PORT:
+        return -ENXIO;
+    case GP_ERROR_NOT_SUPPORTED:
+        return -EPROTONOSUPPORT;
+    case GP_ERROR_TIMEOUT:
+        return -ETIMEDOUT;
+    case GP_ERROR_IO:
+    case GP_ERROR_IO_SUPPORTED_SERIAL:
+    case GP_ERROR_IO_SUPPORTED_USB:
+    case GP_ERROR_IO_INIT:
+    case GP_ERROR_IO_READ:
+    case GP_ERROR_IO_WRITE:
+    case GP_ERROR_IO_UPDATE:
+    case GP_ERROR_IO_SERIAL_SPEED:
+    case GP_ERROR_IO_USB_CLEAR_HALT:
+        return -EIO;
+    case GP_ERROR_IO_USB_FIND:
+        return -ENXIO;
+    case GP_ERROR_IO_USB_CLAIM:
+    case GP_ERROR_IO_LOCK:
+        return -EIO;
 
-   case GP_ERROR_CAMERA_BUSY:
-      return -EBUSY;
-   case GP_ERROR_FILE_NOT_FOUND:
-   case GP_ERROR_DIRECTORY_NOT_FOUND:
-      return -ENOENT;
-   case GP_ERROR_FILE_EXISTS:
-   case GP_ERROR_DIRECTORY_EXISTS:
-      return -EEXIST;
-   case GP_ERROR_PATH_NOT_ABSOLUTE:
-      return -ENOTDIR;
-   case GP_ERROR_CORRUPTED_DATA:
-      return -EIO;
-   case GP_ERROR_CANCEL:
-      return -ECANCELED;
+    case GP_ERROR_CAMERA_BUSY:
+        return -EBUSY;
+    case GP_ERROR_FILE_NOT_FOUND:
+    case GP_ERROR_DIRECTORY_NOT_FOUND:
+        return -ENOENT;
+    case GP_ERROR_FILE_EXISTS:
+    case GP_ERROR_DIRECTORY_EXISTS:
+        return -EEXIST;
+    case GP_ERROR_PATH_NOT_ABSOLUTE:
+        return -ENOTDIR;
+    case GP_ERROR_CORRUPTED_DATA:
+        return -EIO;
+    case GP_ERROR_CANCEL:
+        return -ECANCELED;
 
-   /* These are pretty dubious mappings. */
-   case GP_ERROR_MODEL_NOT_FOUND:
-      return -EPROTO;
-   case GP_ERROR_CAMERA_ERROR:
-      return -EPERM;
-   case GP_ERROR_OS_FAILURE:
-      return -EPIPE;
-   }
-   return -EINVAL;
+    /* These are pretty dubious mappings. */
+    case GP_ERROR_MODEL_NOT_FOUND:
+        return -ENXIO;
+    case GP_ERROR_CAMERA_ERROR:
+        return -EPERM;
+    case GP_ERROR_OS_FAILURE:
+        return -EPIPE;
+    }
+    return -EINVAL;
 }
 
 struct GPCtx {
@@ -145,6 +139,25 @@ struct GPCtx {
 };
 typedef struct GPCtx GPCtx;
 
+
+/*
+ * Static variables set by command line arguments.
+ */
+static gchar *sPort = NULL;
+static gchar *sModel = NULL;
+static gchar *sUsbid = NULL;
+static gint sSpeed = 0;
+static gboolean sHelp = FALSE;
+
+static struct timeval glob_tv_zero;
+
+static GPCtx *sGPGlobalCtx = NULL;
+
+
+/*
+ * Function definitions
+ */
+
 static int gphotofs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi);
 
 static int
@@ -155,36 +168,35 @@ dummyfiller(void *buf, const char *name,
 }
 
 /* Just quickly check for pending events */
-static void
+static int
 gphotofs_check_events() {
+    int ret = GP_OK;
     GPCtx *p = (GPCtx *)fuse_get_context()->private_data;
     CameraEventType eventtype;
     void *eventdata;
     static int ineventcheck = 0;
 
     if (ineventcheck)
-	return;
+        return GP_OK;
     ineventcheck = 1;
 
     do {
-	int ret;
         eventdata = NULL;
-	ret = gp_camera_wait_for_event(p->camera, 1, &eventtype, &eventdata, p->context);
-	if (ret != GP_OK)
-	    break;
-	switch (eventtype) {
-	case GP_EVENT_FOLDER_ADDED:
-	case GP_EVENT_FILE_ADDED: {
-		CameraFilePath	*path = eventdata;
-
-		gphotofs_readdir(path->folder, NULL, dummyfiller, 0, NULL);
-		break;
-	}
-	}
-        free (eventdata);
+        ret = gp_camera_wait_for_event(p->camera, 1, &eventtype, &eventdata, p->context);
+        if (ret != GP_OK)
+            break;
+        switch (eventtype) {
+            case GP_EVENT_FOLDER_ADDED:
+            case GP_EVENT_FILE_ADDED: {
+                CameraFilePath  *path = eventdata;
+                gphotofs_readdir(path->folder, NULL, dummyfiller, 0, NULL);
+                break;
+            }
+        }
+        free(eventdata);
     } while (eventtype != GP_EVENT_TIMEOUT);
     ineventcheck = 0;
-    return;
+    return ret;
 }
 
 static int
@@ -199,9 +211,12 @@ gphotofs_readdir(const char *path,
    int i;
    int ret = 0;
 
-   gphotofs_check_events();
-
+   int event_ret = 0;
    p = (GPCtx *)fuse_get_context()->private_data;
+
+   event_ret = gphotofs_check_events();
+   if (event_ret == GP_ERROR_IO_USB_FIND || event_ret == GP_ERROR_MODEL_NOT_FOUND)
+        return gpresultToErrno(event_ret);
 
    filler(buf, ".", NULL, 0);
    filler(buf, "..", NULL, 0);
@@ -302,6 +317,11 @@ gphotofs_getattr(const char *path,
    struct stat *mystbuf = NULL;
    gpointer value;
    guint i;
+   int event_ret = 0;
+
+   event_ret = gphotofs_check_events();
+   if (event_ret == GP_ERROR_IO_USB_FIND || event_ret == GP_ERROR_MODEL_NOT_FOUND)
+       return gpresultToErrno(event_ret);
 
    memset(stbuf, 0, sizeof(struct stat));
    if(strcmp(path, "/") == 0) {
@@ -358,8 +378,12 @@ gphotofs_open(const char *path,
 {
    GPCtx *p = (GPCtx *)fuse_get_context()->private_data;
    OpenFile *openFile;
+   int ret;
 
-   gphotofs_check_events();
+   ret = gphotofs_check_events();
+   if (ret == GP_ERROR_IO_USB_FIND || ret == GP_ERROR_MODEL_NOT_FOUND)
+       return gpresultToErrno(ret);
+
    if ((fi->flags & 3) == O_RDONLY) {
       openFile = g_hash_table_lookup(p->reads, path);
       if (!openFile) {
@@ -617,27 +641,35 @@ static int gphotofs_chown(const char *path, uid_t uid, gid_t gid)
 
 static int gphotofs_statfs(const char *path, struct statvfs *stvfs)
 {
-   GPCtx *p = (GPCtx *)fuse_get_context()->private_data;
-   CameraStorageInformation *sifs;
-   int res, nrofsifs;
+    GPCtx *p = (GPCtx *)fuse_get_context()->private_data;
+    CameraStorageInformation *sifs;
+    CameraStorageInformation *si;
+    int ret, nrofsifs;
 
-   gphotofs_check_events();
-   res = gp_camera_get_storageinfo (p->camera, &sifs, &nrofsifs, p->context);
-   if (res < GP_OK)
-      return gpresultToErrno(res);
-   if (nrofsifs == 0)
-      return -ENOSYS;
+    ret = gphotofs_check_events();
+    if (ret == GP_ERROR_IO_USB_FIND || ret == GP_ERROR_MODEL_NOT_FOUND)
+        return gpresultToErrno(ret);
 
-   if (nrofsifs == 1) {
-      stvfs->f_bsize = 1024;
-      stvfs->f_blocks = sifs->capacitykbytes;
-      stvfs->f_bfree = sifs->freekbytes;
-      stvfs->f_bavail = sifs->freekbytes;
-      stvfs->f_files = -1;
-      stvfs->f_ffree = -1;
-      stvfs->f_favail = -1;
-   }
-   return 0;
+    ret = gp_camera_get_storageinfo (p->camera, &sifs, &nrofsifs, p->context);
+    if (ret < GP_OK)
+        return gpresultToErrno(ret);
+    if (nrofsifs == 0)
+        return -ENOSYS;
+
+    stvfs->f_bsize = 1024;
+    stvfs->f_frsize = 1024;
+
+    for (int i=0; i < nrofsifs; i++) {
+        si = (sifs) + i;
+        if (!si)
+            continue;
+        stvfs->f_blocks += si->capacitykbytes;
+        stvfs->f_bfree += si->freekbytes;
+        stvfs->f_bavail += si->freekbytes;
+    }
+    if (sifs)
+        free(sifs);
+    return 0;
 }
 
 static int
@@ -712,148 +744,189 @@ debug_func (GPLogLevel level, const char *domain, const char *str,
    fflush (logfile);
 }
 
-static void *
-gphotofs_init()
+
+/* Find and try to connect to a device */
+static int
+gphotofs_connect()
 {
    int ret = GP_OK;
    GPCtx *p = g_new0(GPCtx, 1);
+   sGPGlobalCtx = p;
 
-#if 0 /* enable for debugging */
-   int fd = -1;
-   FILE *f = NULL;
+    #if 0 /* enable for debugging */
+        int fd = -1;
+        FILE *f = NULL;
 
-   fd = open("/tmp/gpfs.log",O_WRONLY|O_CREAT,0600);
-   if (fd != -1) {
-      f = fdopen(fd,"a");
-      if (f)
-         p->debug_func_id = gp_log_add_func (GP_LOG_ALL, debug_func, (void *) f);
-   }
-   fprintf (f, "log opened on pid %d\n", getpid());
-#endif
+        fd = open("/tmp/gpfs.log",O_WRONLY|O_CREAT,0600);
+        if (fd != -1) {
+            f = fdopen(fd,"a");
+            if (f)
+                p->debug_func_id = gp_log_add_func (GP_LOG_ALL, debug_func, (void *) f);
+        }
+        fprintf(f, "log opened on pid %d\n", getpid());
+    #endif
 
-   p->context = gp_context_new();
-   gettimeofday (&glob_tv_zero, NULL);
+    p->context = gp_context_new();
+    gettimeofday(&glob_tv_zero, NULL);
 
-   setlocale (LC_CTYPE,"en_US.UTF-8"); /* for ptp2 driver to convert to utf-8 */
+    setlocale(LC_CTYPE,"en_US.UTF-8"); /* for ptp2 driver to convert to utf-8 */
 
-   gp_camera_new (&p->camera);
+    gp_camera_new(&p->camera);
 
-   gp_abilities_list_new(&p->abilities);
-   gp_abilities_list_load(p->abilities, p->context);
+    gp_abilities_list_new(&p->abilities);
+    gp_abilities_list_load(p->abilities, p->context);
 
-   if (sSpeed) {
-      GPPortInfo	info;
-      GPPortType	type;
+    do {
+        if (sSpeed) {
+            GPPortInfo    info;
+            GPPortType    type;
 
-      /* Make sure we've got a serial port. */
-      ret = gp_camera_get_port_info(p->camera, &info);
-      gp_port_info_get_type (info, &type);
-      if (ret != 0) {
-         goto error;
-      } else if (type != GP_PORT_SERIAL) {
-         g_fprintf(stderr, "%s\n", _("You can only specify speeds for serial ports."));
-         goto error;
-      }
+            /* Make sure we've got a serial port. */
+            ret = gp_camera_get_port_info(p->camera, &info);
+            gp_port_info_get_type (info, &type);
+            if (ret != 0) {
+                break;
+            } else if (type != GP_PORT_SERIAL) {
+                g_fprintf(stderr, "%s\n", _("You can only specify speeds for serial ports."));
+                ret = GP_ERROR_IO_SUPPORTED_SERIAL;
+                break;
+            }
 
-      /* Set the speed. */
-      ret = gp_camera_set_port_speed(p->camera, sSpeed);
-      if (ret != 0) {
-         goto error;
-      }
-   }
+            /* Set the speed. */
+            ret = gp_camera_set_port_speed(p->camera, sSpeed);
+            if (ret != 0)
+                break;
+        }
 
-   if (sModel) {
-      CameraAbilities a;
-      int m;
+        if (sModel) {
+            CameraAbilities a;
+            int m;
 
-      m = gp_abilities_list_lookup_model(p->abilities, sModel);
-      if (m < 0) {
-         g_fprintf(stderr, _("Model %s was not recognised."), sModel);
-         g_fprintf(stderr, "\n");
-         goto error;
-      }
+            m = gp_abilities_list_lookup_model(p->abilities, sModel);
+            if (m < 0) {
+                g_fprintf(stderr, _("Model %s was not recognised."), sModel);
+                g_fprintf(stderr, "\n");
+                ret = m;
+                break;
+            }
 
-      ret = gp_abilities_list_get_abilities(p->abilities, m, &a);
-      if (ret != 0) {
-         goto error;
-      }
+            ret = gp_abilities_list_get_abilities(p->abilities, m, &a);
+            if (ret != 0)
+                break;
 
-      ret = gp_camera_set_abilities(p->camera, a);
-      if (ret != 0) {
-         goto error;
-      }
+            ret = gp_camera_set_abilities(p->camera, a);
+            if (ret != 0)
+                break;
 
-      /* Marcus: why save it? puzzling. */
-      ret = gp_setting_set("gphoto2", "model", a.model);
-      if (ret != 0) {
-         goto error;
-      }
-   }
+            /* Marcus: why save it? puzzling. */
+            ret = gp_setting_set("gphoto2", "model", a.model);
+            if (ret != 0)
+                break;
+        }
 
-   if (sPort) {
-      GPPortInfo info;
-      GPPortInfoList *il = NULL;
-      int i;
+        if (sPort) {
+            GPPortInfo info;
+            GPPortInfoList *il = NULL;
+            int i;
 
-      ret = gp_port_info_list_new(&il);
-      if (ret != 0) {
-         goto error;
-      }
+            ret = gp_port_info_list_new(&il);
+            if (ret != 0)
+                break;
 
-      ret = gp_port_info_list_load(il);
-      if (ret != 0) {
-         goto error;
-      }
+            ret = gp_port_info_list_load(il);
+            if (ret != 0)
+                break;
 
-      i = gp_port_info_list_lookup_path(il, sPort);
-      if (i == GP_ERROR_UNKNOWN_PORT) {
-         g_fprintf(stderr,
-                   _("The port you specified ('%s') can not "
-                     "be found. Please specify one of the ports "
-                     "found by 'gphoto2 --list-ports' make sure "
-                     "the spelling is correct (i.e. with prefix "
-                     "'serial:' or 'usb:')."), sPort);
-         g_fprintf(stderr, "\n");
-         goto error;
-      } else if (i < 0) {
-         ret = i;
-         goto error;
-      } else {
-	 char *xpath;
-         ret = gp_port_info_list_get_info(il, i, &info);
-         if (ret != 0) {
-            goto error;
-         }
+            i = gp_port_info_list_lookup_path(il, sPort);
+            if (i == GP_ERROR_UNKNOWN_PORT) {
+                g_fprintf(stderr,
+                        _("The port you specified ('%s') can not "
+                            "be found. Please specify one of the ports "
+                            "found by 'gphoto2 --list-ports' make sure "
+                            "the spelling is correct (i.e. with prefix "
+                            "'serial:' or 'usb:')."), sPort);
+                g_fprintf(stderr, "\n");
+                ret = i;
+                break;
+            } else if (i < 0) {
+                ret = i;
+                break;
+            } else {
+                char *xpath;
+                ret = gp_port_info_list_get_info(il, i, &info);
+                if (ret != 0)
+                    break;
 
-         ret = gp_camera_set_port_info (p->camera, info);
-         if (ret != 0)
-            goto error;
-         /* Marcus: why save it? puzzling. */
-	 gp_port_info_get_path (info, &xpath);
-         gp_setting_set("gphoto2", "port", xpath);
+                ret = gp_camera_set_port_info (p->camera, info);
+                if (ret != 0)
+                    break;
+                /* Marcus: why save it? puzzling. */
+                gp_port_info_get_path (info, &xpath);
+                gp_setting_set("gphoto2", "port", xpath);
 
-         gp_port_info_list_free(il);
-      }
-   }
+                gp_port_info_list_free(il);
+            }
+        }
 
-   p->dirs = g_hash_table_new_full(g_str_hash, g_str_equal,
-                                   g_free, g_free);
-   p->files = g_hash_table_new_full(g_str_hash, g_str_equal,
-                                    g_free, g_free);
-   p->reads = g_hash_table_new_full(g_str_hash, g_str_equal,
-                                    g_free, (GDestroyNotify)freeOpenFile);
-   p->writes = g_hash_table_new_full(g_str_hash, g_str_equal,
-                                    g_free, (GDestroyNotify)freeOpenFile);
+        /* Check the connection by checking the storage info of the device.
+         * Abort if the device has no valid storage listed.
+         */
+        CameraStorageInformation *sifs;
+        int nrofsifs = 0;
+
+        ret = gp_camera_get_storageinfo (p->camera, &sifs, &nrofsifs, p->context);
+        if (ret < GP_OK)
+            break;
+
+        if (sifs)
+            free(sifs);
+
+        if (nrofsifs == 0) {
+            ret = GP_ERROR_IO_USB_FIND;
+            g_fprintf(stderr, _("Could not retrieve device storage. Make sure that the device is unlocked."), sModel);
+            g_fprintf(stderr, "\n");
+            break;
+        }
+
+        /* Init and first connection successful */
+    } while (0);
+
+   return ret;
+}
+
+static void *
+gphotofs_init()
+{
+   GPCtx *p;
+
+    if (!sGPGlobalCtx) {
+        g_fprintf(stderr, _("Error initialising gphotofs: %s"),
+                  gp_result_as_string(GP_ERROR_LIBRARY));
+        g_fprintf(stderr, "\n");
+        // In theory, the following command should be used to exit properly
+        // with the correct cleanup of fuse and automatic unmount.
+        // fuse_exit(fuse_get_context()->fuse);
+        // But that could be dangerous as the "mount" will already have succeeded
+        // at this step and so some one try to write to the wrong FS if it is
+        // automatically un-mounted.
+        // With the following hard exit, at least fuse will return an "ENOTCONN" error
+        // if someone try to use the mount point.
+        // Final note: the EXIT_FAILURE will not be reported as at the "init" step,
+        // the mount has already succeeded.
+        exit(EXIT_FAILURE);
+    }
+
+    p = sGPGlobalCtx;
+
+    /* Initialize the local cache */
+    p->dirs = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+    p->files = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+    p->reads = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
+                                     (GDestroyNotify)freeOpenFile);
+    p->writes = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
+                                      (GDestroyNotify)freeOpenFile);
 
    return p;
-
- error:
-   if (ret != GP_OK) {
-      g_fprintf(stderr, _("Error initialising gphotofs: %s"),
-                gp_result_as_string(ret));
-      g_fprintf(stderr, "\n");
-   }
-   exit(EXIT_FAILURE);
 }
 
 static void
@@ -925,6 +998,7 @@ int
 main(int argc,
      char *argv[])
 {
+   int ret = GP_OK;
    GError *error = NULL;
 
    GOptionContext *context = g_option_context_new(_("- gphoto filesystem"));
@@ -944,6 +1018,14 @@ main(int argc,
      memcpy (newargv+2,argv+1,sizeof(char*)*(argc-1));
      newargv[0] = argv[0];
      newargv[1] = "-s"; /* disable multithreading */
+
+     ret = gphotofs_connect();
+     if (ret != GP_OK || sGPGlobalCtx == NULL) {
+        g_fprintf(stderr, _("Error initialising gphotofs: %s"),
+                  gp_result_as_string(ret));
+        g_fprintf(stderr, "\n");
+        return 1;
+    }
 
      return fuse_main(argc+1, newargv, &gphotofs_oper);
    }
