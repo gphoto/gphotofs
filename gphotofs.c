@@ -76,59 +76,63 @@ freeOpenFile(OpenFile *openFile)
 static int
 gpresultToErrno(int result)
 {
-   switch (result) {
-   case GP_ERROR:
-      return -EPROTO;
-   case GP_ERROR_BAD_PARAMETERS:
-      return -EINVAL;
-   case GP_ERROR_NO_MEMORY:
-      return -ENOMEM;
-   case GP_ERROR_LIBRARY:
-      return -ENOSYS;
-   case GP_ERROR_UNKNOWN_PORT:
-      return -ENXIO;
-   case GP_ERROR_NOT_SUPPORTED:
-      return -EPROTONOSUPPORT;
-   case GP_ERROR_TIMEOUT:
-      return -ETIMEDOUT;
-   case GP_ERROR_IO:
-   case GP_ERROR_IO_SUPPORTED_SERIAL:
-   case GP_ERROR_IO_SUPPORTED_USB:
-   case GP_ERROR_IO_INIT:
-   case GP_ERROR_IO_READ:
-   case GP_ERROR_IO_WRITE:
-   case GP_ERROR_IO_UPDATE:
-   case GP_ERROR_IO_SERIAL_SPEED:
-   case GP_ERROR_IO_USB_CLEAR_HALT:
-   case GP_ERROR_IO_USB_FIND:
-   case GP_ERROR_IO_USB_CLAIM:
-   case GP_ERROR_IO_LOCK:
-      return -EIO;
+    switch (result) {
+    case GP_OK:
+        return 0;
+    case GP_ERROR:
+        return -EPROTO;
+    case GP_ERROR_BAD_PARAMETERS:
+        return -EINVAL;
+    case GP_ERROR_NO_MEMORY:
+        return -ENOMEM;
+    case GP_ERROR_LIBRARY:
+        return -ENOSYS;
+    case GP_ERROR_UNKNOWN_PORT:
+        return -ENXIO;
+    case GP_ERROR_NOT_SUPPORTED:
+        return -EPROTONOSUPPORT;
+    case GP_ERROR_TIMEOUT:
+        return -ETIMEDOUT;
+    case GP_ERROR_IO:
+    case GP_ERROR_IO_SUPPORTED_SERIAL:
+    case GP_ERROR_IO_SUPPORTED_USB:
+    case GP_ERROR_IO_INIT:
+    case GP_ERROR_IO_READ:
+    case GP_ERROR_IO_WRITE:
+    case GP_ERROR_IO_UPDATE:
+    case GP_ERROR_IO_SERIAL_SPEED:
+    case GP_ERROR_IO_USB_CLEAR_HALT:
+        return -EIO;
+    case GP_ERROR_IO_USB_FIND:
+        return -ENXIO;
+    case GP_ERROR_IO_USB_CLAIM:
+    case GP_ERROR_IO_LOCK:
+        return -EIO;
 
-   case GP_ERROR_CAMERA_BUSY:
-      return -EBUSY;
-   case GP_ERROR_FILE_NOT_FOUND:
-   case GP_ERROR_DIRECTORY_NOT_FOUND:
-      return -ENOENT;
-   case GP_ERROR_FILE_EXISTS:
-   case GP_ERROR_DIRECTORY_EXISTS:
-      return -EEXIST;
-   case GP_ERROR_PATH_NOT_ABSOLUTE:
-      return -ENOTDIR;
-   case GP_ERROR_CORRUPTED_DATA:
-      return -EIO;
-   case GP_ERROR_CANCEL:
-      return -ECANCELED;
+    case GP_ERROR_CAMERA_BUSY:
+        return -EBUSY;
+    case GP_ERROR_FILE_NOT_FOUND:
+    case GP_ERROR_DIRECTORY_NOT_FOUND:
+        return -ENOENT;
+    case GP_ERROR_FILE_EXISTS:
+    case GP_ERROR_DIRECTORY_EXISTS:
+        return -EEXIST;
+    case GP_ERROR_PATH_NOT_ABSOLUTE:
+        return -ENOTDIR;
+    case GP_ERROR_CORRUPTED_DATA:
+        return -EIO;
+    case GP_ERROR_CANCEL:
+        return -ECANCELED;
 
-   /* These are pretty dubious mappings. */
-   case GP_ERROR_MODEL_NOT_FOUND:
-      return -EPROTO;
-   case GP_ERROR_CAMERA_ERROR:
-      return -EPERM;
-   case GP_ERROR_OS_FAILURE:
-      return -EPIPE;
-   }
-   return -EINVAL;
+    /* These are pretty dubious mappings. */
+    case GP_ERROR_MODEL_NOT_FOUND:
+        return -ENXIO;
+    case GP_ERROR_CAMERA_ERROR:
+        return -EPERM;
+    case GP_ERROR_OS_FAILURE:
+        return -EPIPE;
+    }
+    return -EINVAL;
 }
 
 struct GPCtx {
@@ -155,36 +159,35 @@ dummyfiller(void *buf, const char *name,
 }
 
 /* Just quickly check for pending events */
-static void
+static int
 gphotofs_check_events() {
+    int ret = GP_OK;
     GPCtx *p = (GPCtx *)fuse_get_context()->private_data;
     CameraEventType eventtype;
     void *eventdata;
     static int ineventcheck = 0;
 
     if (ineventcheck)
-	return;
+        return GP_OK;
     ineventcheck = 1;
 
     do {
-	int ret;
         eventdata = NULL;
-	ret = gp_camera_wait_for_event(p->camera, 1, &eventtype, &eventdata, p->context);
-	if (ret != GP_OK)
-	    break;
-	switch (eventtype) {
-	case GP_EVENT_FOLDER_ADDED:
-	case GP_EVENT_FILE_ADDED: {
-		CameraFilePath	*path = eventdata;
-
-		gphotofs_readdir(path->folder, NULL, dummyfiller, 0, NULL);
-		break;
-	}
-	}
-        free (eventdata);
+        ret = gp_camera_wait_for_event(p->camera, 1, &eventtype, &eventdata, p->context);
+        if (ret != GP_OK)
+            break;
+        switch (eventtype) {
+            case GP_EVENT_FOLDER_ADDED:
+            case GP_EVENT_FILE_ADDED: {
+                CameraFilePath  *path = eventdata;
+                gphotofs_readdir(path->folder, NULL, dummyfiller, 0, NULL);
+                break;
+            }
+        }
+        free(eventdata);
     } while (eventtype != GP_EVENT_TIMEOUT);
     ineventcheck = 0;
-    return;
+    return ret;
 }
 
 static int
@@ -199,9 +202,12 @@ gphotofs_readdir(const char *path,
    int i;
    int ret = 0;
 
-   gphotofs_check_events();
-
+   int event_ret = 0;
    p = (GPCtx *)fuse_get_context()->private_data;
+
+   event_ret = gphotofs_check_events();
+   if (event_ret == GP_ERROR_IO_USB_FIND || event_ret == GP_ERROR_MODEL_NOT_FOUND)
+        return gpresultToErrno(event_ret);
 
    filler(buf, ".", NULL, 0);
    filler(buf, "..", NULL, 0);
@@ -302,6 +308,11 @@ gphotofs_getattr(const char *path,
    struct stat *mystbuf = NULL;
    gpointer value;
    guint i;
+   int event_ret = 0;
+
+   event_ret = gphotofs_check_events();
+   if (event_ret == GP_ERROR_IO_USB_FIND || event_ret == GP_ERROR_MODEL_NOT_FOUND)
+       return gpresultToErrno(event_ret);
 
    memset(stbuf, 0, sizeof(struct stat));
    if(strcmp(path, "/") == 0) {
@@ -358,8 +369,12 @@ gphotofs_open(const char *path,
 {
    GPCtx *p = (GPCtx *)fuse_get_context()->private_data;
    OpenFile *openFile;
+   int ret;
 
-   gphotofs_check_events();
+   ret = gphotofs_check_events();
+   if (ret == GP_ERROR_IO_USB_FIND || ret == GP_ERROR_MODEL_NOT_FOUND)
+       return gpresultToErrno(ret);
+
    if ((fi->flags & 3) == O_RDONLY) {
       openFile = g_hash_table_lookup(p->reads, path);
       if (!openFile) {
@@ -619,12 +634,15 @@ static int gphotofs_statfs(const char *path, struct statvfs *stvfs)
 {
    GPCtx *p = (GPCtx *)fuse_get_context()->private_data;
    CameraStorageInformation *sifs;
-   int res, nrofsifs;
+   int ret, nrofsifs;
 
-   gphotofs_check_events();
-   res = gp_camera_get_storageinfo (p->camera, &sifs, &nrofsifs, p->context);
-   if (res < GP_OK)
-      return gpresultToErrno(res);
+   ret = gphotofs_check_events();
+   if (ret == GP_ERROR_IO_USB_FIND || ret == GP_ERROR_MODEL_NOT_FOUND)
+       return gpresultToErrno(ret);
+
+   ret = gp_camera_get_storageinfo (p->camera, &sifs, &nrofsifs, p->context);
+   if (ret < GP_OK)
+      return gpresultToErrno(ret);
    if (nrofsifs == 0)
       return -ENOSYS;
 
@@ -853,6 +871,16 @@ gphotofs_init()
                 gp_result_as_string(ret));
       g_fprintf(stderr, "\n");
    }
+   // In theory, the following command should be used to exit properly
+   // with the correct cleanup of fuse and automatic unmount.
+   // fuse_exit(fuse_get_context()->fuse);
+   // But that could be dangerous as the "mount" will already have succeeded
+   // at this step and so some one try to write to the wrong FS if it is
+   // automatically un-mounted.
+   // With the following hard exit, at least fuse will return an "ENOTCONN" error
+   // if someone try to use the mount point.
+   // Final note: the EXIT_FAILURE will not be reported as at the "init" step,
+   // the mount has already succeeded.
    exit(EXIT_FAILURE);
 }
 
