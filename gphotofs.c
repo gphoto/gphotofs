@@ -889,7 +889,7 @@ gphotofs_connect()
 
         if (nrofsifs == 0) {
             ret = GP_ERROR_IO_USB_FIND;
-            g_fprintf(stderr, _("Could not retrieve device storage. Make sure that the device %s is unlocked."), sModel);
+            g_fprintf(stderr, _("Could not retrieve device storage. Make sure that your device is unlocked."));
             g_fprintf(stderr, "\n");
             break;
         }
