@@ -649,6 +649,7 @@ static int gphotofs_statfs(const char *path, struct statvfs *stvfs)
     CameraStorageInformation *sifs;
     CameraStorageInformation *si;
     int ret, nrofsifs;
+    int i;
 
     ret = gphotofs_check_events();
     if (ret == GP_ERROR_IO_USB_FIND || ret == GP_ERROR_MODEL_NOT_FOUND)
@@ -663,7 +664,7 @@ static int gphotofs_statfs(const char *path, struct statvfs *stvfs)
     stvfs->f_bsize = 1024;
     stvfs->f_frsize = 1024;
 
-    for (int i=0; i < nrofsifs; i++) {
+    for (i=0; i < nrofsifs; i++) {
         si = (sifs) + i;
         if (!si)
             continue;
