@@ -388,7 +388,7 @@ gphotofs_open(const char *path,
    if (ret == GP_ERROR_IO_USB_FIND || ret == GP_ERROR_MODEL_NOT_FOUND)
        return gpresultToErrno(ret);
 
-   if ((fi->flags & 3) == O_RDONLY) {
+   if ((fi->flags & O_ACCMODE) == O_RDONLY) {
       openFile = g_hash_table_lookup(p->reads, path);
       if (!openFile) {
 	 gchar *dir = g_path_get_dirname(path);
@@ -409,7 +409,7 @@ gphotofs_open(const char *path,
       }
       return 0;
    }
-   if ((fi->flags & 3) == O_WRONLY) {
+   if ((fi->flags & O_ACCMODE) == O_WRONLY) {
       openFile = g_hash_table_lookup(p->writes, path);
       if (!openFile) {
 	 gchar *dir = g_path_get_dirname(path);
