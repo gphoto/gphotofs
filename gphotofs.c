@@ -805,32 +805,6 @@ gphotofs_connect()
                 break;
         }
 
-        if (sModel) {
-            CameraAbilities a;
-            int m;
-
-            m = gp_abilities_list_lookup_model(p->abilities, sModel);
-            if (m < 0) {
-                g_fprintf(stderr, _("Model %s was not recognised."), sModel);
-                g_fprintf(stderr, "\n");
-                ret = m;
-                break;
-            }
-
-            ret = gp_abilities_list_get_abilities(p->abilities, m, &a);
-            if (ret != 0)
-                break;
-
-            ret = gp_camera_set_abilities(p->camera, a);
-            if (ret != 0)
-                break;
-
-            /* Marcus: why save it? puzzling. */
-            ret = gp_setting_set("gphoto2", "model", a.model);
-            if (ret != 0)
-                break;
-        }
-
         if (sPort) {
             GPPortInfo info;
             GPPortInfoList *il = NULL;
@@ -871,9 +845,65 @@ gphotofs_connect()
                 gp_port_info_get_path (info, &xpath);
                 gp_setting_set("gphoto2", "port", xpath);
 
+                // According to the gphoto2 docs, both port and abilities must be set or the camera will be
+                // auto-detected.
+                if (!sModel) {
+                    CameraList *cameraList;
+                    ret = gp_list_new(&cameraList);
+                    if (ret != 0)
+                        break;
+
+                    ret = gp_abilities_list_detect(p->abilities, il, cameraList, p->context);
+                    if (ret != 0)
+                        break;
+
+                    ret = gp_list_count(cameraList);
+                    if (ret > 1) {
+
+                        g_fprintf(stderr, "Multiple cameras detected on specified port. Model is required.\n");
+                        return GP_ERROR;
+                    } else if (ret < 1) {
+                        g_fprintf(stderr, "No cameras detected on specified port.\n");
+                        return ret;
+                    }
+
+                    const char *model;
+                    ret = gp_list_get_name(cameraList, 0, &model);
+                    if (ret != 0)
+                        break;
+                    sModel = strdup(model);
+                    gp_list_free(cameraList);
+                }
                 gp_port_info_list_free(il);
             }
         }
+
+        if (sModel) {
+            CameraAbilities a;
+            int m;
+
+            m = gp_abilities_list_lookup_model(p->abilities, sModel);
+            if (m < 0) {
+                g_fprintf(stderr, _("Model %s was not recognised."), sModel);
+                g_fprintf(stderr, "\n");
+                ret = m;
+                break;
+            }
+
+            ret = gp_abilities_list_get_abilities(p->abilities, m, &a);
+            if (ret != 0)
+                break;
+
+            ret = gp_camera_set_abilities(p->camera, a);
+            if (ret != 0)
+                break;
+
+            /* Marcus: why save it? puzzling. */
+            ret = gp_setting_set("gphoto2", "model", a.model);
+            if (ret != 0)
+                break;
+        }
+
 
         /* Check the connection by checking the storage info of the device.
          * Abort if the device has no valid storage listed.
