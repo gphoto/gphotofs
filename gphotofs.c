@@ -12,6 +12,8 @@
 #include "config.h"
 #endif
 
+#define DEBUG
+
 #include <fuse.h>
 
 #include <gphoto2/gphoto2.h>
@@ -731,7 +733,7 @@ gphotofs_unlink(const char *path)
 
 }
 
-#if 0
+#ifdef DEBUG
 static void
 debug_func (GPLogLevel level, const char *domain, const char *str,
             void *data)
@@ -760,7 +762,7 @@ gphotofs_connect()
    GPCtx *p = g_new0(GPCtx, 1);
    sGPGlobalCtx = p;
 
-#if 0 /* enable for debugging */
+#ifdef DEBUG /* enable for debugging */
         int fd = -1;
         FILE *f = NULL;
 
@@ -861,9 +863,11 @@ gphotofs_connect()
                     if (ret > 1) {
 
                         g_fprintf(stderr, "Multiple cameras detected on specified port. Model is required.\n");
-                        return GP_ERROR;
+			ret = GP_ERROR;
+                        return ret;
                     } else if (ret < 1) {
                         g_fprintf(stderr, "No cameras detected on specified port.\n");
+			ret = GP_ERROR;
                         return ret;
                     }
 
