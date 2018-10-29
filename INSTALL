@@ -363,3 +363,19 @@ operates.
 `configure' also accepts some other, not widely useful, options.  Run
 `configure --help' for more details.
 
+=====================
+Debian Install
+=====================
+Requirements:
+   libfuse-dev ```sudo apt-get install libfuse-dev```
+
+1. Download source packages from git
+```git clone https://github.com/gphoto/gphotofs.git```
+2. Generate the configuration file for the next step:
+```autoreconf --install --symlink```
+3. Configure the package before doing the make operations 
+``` ./configure```
+4. Make the package
+```make``` or for newer systems with more cores ```make -j4``` where 4 is the number of cores.
+5. Install the package
+```sudo make install```
