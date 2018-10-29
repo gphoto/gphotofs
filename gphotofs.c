@@ -12,6 +12,8 @@
 #include "config.h"
 #endif
 
+#define DEBUG
+
 #include <fuse.h>
 
 #include <gphoto2/gphoto2.h>
@@ -347,18 +349,18 @@ gphotofs_getattr(const char *path,
       gchar *dir;
       value = g_hash_table_lookup(p->files, path);
       if (!value) {
-	 value = g_hash_table_lookup(p->dirs, path);
+         value = g_hash_table_lookup(p->dirs, path);
       }
       if (value) {
-	 mystbuf = (struct stat *)value;
-	 break;
+         mystbuf = (struct stat *)value;
+         break;
       }
 
       dir = g_path_get_dirname(path);
       ret = gphotofs_readdir(dir, NULL, dummyfiller, 0, NULL);
       g_free(dir);
       if (ret != 0) {
-	 return ret;
+         return ret;
       }
    }
 
@@ -391,46 +393,46 @@ gphotofs_open(const char *path,
    if ((fi->flags & O_ACCMODE) == O_RDONLY) {
       openFile = g_hash_table_lookup(p->reads, path);
       if (!openFile) {
-	 gchar *dir = g_path_get_dirname(path);
-	 gchar *file = g_path_get_basename(path);
+         gchar *dir = g_path_get_dirname(path);
+         gchar *file = g_path_get_basename(path);
 
-	 openFile = g_new0(OpenFile, 1);
-	 openFile->file = NULL;
-	 openFile->count = 1;
-	 openFile->destdir = g_strdup(dir);
-	 openFile->destname = g_strdup(file);
-	 g_hash_table_replace(p->reads, g_strdup(path), openFile);
+         openFile = g_new0(OpenFile, 1);
+         openFile->file = NULL;
+         openFile->count = 1;
+         openFile->destdir = g_strdup(dir);
+         openFile->destname = g_strdup(file);
+         g_hash_table_replace(p->reads, g_strdup(path), openFile);
 
-	 g_free(file);
-	 g_free(dir);
+         g_free(file);
+         g_free(dir);
 
       } else {
-	 openFile->count++;
+         openFile->count++;
       }
       return 0;
    }
    if ((fi->flags & O_ACCMODE) == O_WRONLY) {
       openFile = g_hash_table_lookup(p->writes, path);
       if (!openFile) {
-	 gchar *dir = g_path_get_dirname(path);
-	 gchar *file = g_path_get_basename(path);
+         gchar *dir = g_path_get_dirname(path);
+         gchar *file = g_path_get_basename(path);
 
-	 openFile = g_new0(OpenFile, 1);
-	 openFile->file = NULL;
-	 openFile->count = 1;
-	 openFile->size = 0;
-	 openFile->writing = 1;
-	 openFile->destdir = g_strdup(dir);
-	 openFile->destname = g_strdup(file);
+         openFile = g_new0(OpenFile, 1);
+         openFile->file = NULL;
+         openFile->count = 1;
+         openFile->size = 0;
+         openFile->writing = 1;
+         openFile->destdir = g_strdup(dir);
+         openFile->destname = g_strdup(file);
 
-	 openFile->buf = malloc(1);
-	 if (!openFile->buf) return -1;
-	 g_hash_table_replace(p->writes, g_strdup(path), openFile);
+         openFile->buf = malloc(1);
+         if (!openFile->buf) return -1;
+         g_hash_table_replace(p->writes, g_strdup(path), openFile);
 
          g_free(dir);
          g_free(file);
       } else {
-	 openFile->count++;
+         openFile->count++;
       }
       return 0;
    }
@@ -448,7 +450,7 @@ gphotofs_read(const char *path,
    OpenFile *openFile;
    const char *data;
    unsigned long int dataSize;
-   uint64_t	xsize;
+   uint64_t     xsize;
    int ret;
 
    /* gphotofs_check_events(); ... probably on doing small reads this will take too much time */
@@ -468,7 +470,7 @@ gphotofs_read(const char *path,
 
       gp_file_new(&cFile);
       ret = gp_camera_file_get(p->camera, openFile->destdir, openFile->destname, GP_FILE_TYPE_NORMAL,
-				    cFile, p->context);
+                                    cFile, p->context);
 
       openFile->file = cFile;
    }
@@ -525,7 +527,7 @@ gphotofs_mkdir(const char *path, mode_t mode)
     if (ret != 0) {
        ret = gpresultToErrno(ret);
     } else {
-       struct stat *stbuf;	
+       struct stat *stbuf;      
 
        stbuf = g_new0(struct stat, 1);
        stbuf->st_mode = S_IFDIR | 0555;
@@ -583,7 +585,7 @@ gphotofs_mknod(const char *path, mode_t mode, dev_t rdev)
       return -1;
    }
    res = gp_camera_folder_put_file (p->camera, dir, file, GP_FILE_TYPE_NORMAL, cfile,
-				    p->context);
+                                    p->context);
    gp_file_unref (cfile);
    g_free(dir);
    g_free(file);
@@ -607,18 +609,18 @@ static int gphotofs_flush(const char *path, struct fuse_file_info *fi)
       gp_file_new (&file);
       data = malloc (openFile->size);
       if (!data)
-	 return -ENOMEM;
+         return -ENOMEM;
       memcpy (data, openFile->buf, openFile->size);
       /* The call below takes over responsbility of freeing data. */
       res = gp_file_set_data_and_size (file, data, openFile->size);
       if (res < 0) {
-	 gp_file_unref (file);
-	 return -1;
+         gp_file_unref (file);
+         return -1;
       }
       res = gp_camera_file_delete(p->camera, openFile->destdir, openFile->destname, p->context);
       res = gp_camera_folder_put_file (p->camera, openFile->destdir, openFile->destname, GP_FILE_TYPE_NORMAL, file, p->context);
       if (res < 0)
-	 return -ENOSPC;
+         return -ENOSPC;
       gp_file_unref (file);
    }
    return 0;
@@ -690,7 +692,7 @@ gphotofs_release(const char *path,
       openFile->count--;
       if (openFile->count == 0) {
          if (openFile->writing) {
-	     free (openFile->buf);
+             free (openFile->buf);
              g_hash_table_remove(p->writes, path);
          } else  {
              g_hash_table_remove(p->reads, path);
@@ -731,7 +733,7 @@ gphotofs_unlink(const char *path)
 
 }
 
-#if 0
+#ifdef DEBUG
 static void
 debug_func (GPLogLevel level, const char *domain, const char *str,
             void *data)
@@ -760,7 +762,7 @@ gphotofs_connect()
    GPCtx *p = g_new0(GPCtx, 1);
    sGPGlobalCtx = p;
 
-#if 0 /* enable for debugging */
+#ifdef DEBUG /* enable for debugging */
         int fd = -1;
         FILE *f = NULL;
 
@@ -805,32 +807,6 @@ gphotofs_connect()
                 break;
         }
 
-        if (sModel) {
-            CameraAbilities a;
-            int m;
-
-            m = gp_abilities_list_lookup_model(p->abilities, sModel);
-            if (m < 0) {
-                g_fprintf(stderr, _("Model %s was not recognised."), sModel);
-                g_fprintf(stderr, "\n");
-                ret = m;
-                break;
-            }
-
-            ret = gp_abilities_list_get_abilities(p->abilities, m, &a);
-            if (ret != 0)
-                break;
-
-            ret = gp_camera_set_abilities(p->camera, a);
-            if (ret != 0)
-                break;
-
-            /* Marcus: why save it? puzzling. */
-            ret = gp_setting_set("gphoto2", "model", a.model);
-            if (ret != 0)
-                break;
-        }
-
         if (sPort) {
             GPPortInfo info;
             GPPortInfoList *il = NULL;
@@ -871,9 +847,67 @@ gphotofs_connect()
                 gp_port_info_get_path (info, &xpath);
                 gp_setting_set("gphoto2", "port", xpath);
 
+                // According to the gphoto2 docs, both port and abilities must be set or the camera will be
+                // auto-detected.
+                if (!sModel) {
+                    CameraList *cameraList;
+                    ret = gp_list_new(&cameraList);
+                    if (ret != 0)
+                        break;
+
+                    ret = gp_abilities_list_detect(p->abilities, il, cameraList, p->context);
+                    if (ret != 0)
+                        break;
+
+                    ret = gp_list_count(cameraList);
+                    if (ret > 1) {
+
+                        g_fprintf(stderr, "Multiple cameras detected on specified port. Model is required.\n");
+			ret = GP_ERROR;
+                        return ret;
+                    } else if (ret < 1) {
+                        g_fprintf(stderr, "No cameras detected on specified port.\n");
+			ret = GP_ERROR;
+                        return ret;
+                    }
+
+                    const char *model;
+                    ret = gp_list_get_name(cameraList, 0, &model);
+                    if (ret != 0)
+                        break;
+                    sModel = strdup(model);
+                    gp_list_free(cameraList);
+                }
                 gp_port_info_list_free(il);
             }
         }
+
+        if (sModel) {
+            CameraAbilities a;
+            int m;
+
+            m = gp_abilities_list_lookup_model(p->abilities, sModel);
+            if (m < 0) {
+                g_fprintf(stderr, _("Model %s was not recognised."), sModel);
+                g_fprintf(stderr, "\n");
+                ret = m;
+                break;
+            }
+
+            ret = gp_abilities_list_get_abilities(p->abilities, m, &a);
+            if (ret != 0)
+                break;
+
+            ret = gp_camera_set_abilities(p->camera, a);
+            if (ret != 0)
+                break;
+
+            /* Marcus: why save it? puzzling. */
+            ret = gp_setting_set("gphoto2", "model", a.model);
+            if (ret != 0)
+                break;
+        }
+
 
         /* Check the connection by checking the storage info of the device.
          * Abort if the device has no valid storage listed.
@@ -969,26 +1003,26 @@ gphotofs_destroy(void *context)
 }
 
 static struct fuse_operations gphotofs_oper = {
-    .init	= gphotofs_init,
-    .destroy	= gphotofs_destroy,
-    .readdir	= gphotofs_readdir,
-    .getattr	= gphotofs_getattr,
-    .open	= gphotofs_open,
-    .read	= gphotofs_read,
-    .release	= gphotofs_release,
-    .unlink	= gphotofs_unlink,
+    .init       = gphotofs_init,
+    .destroy    = gphotofs_destroy,
+    .readdir    = gphotofs_readdir,
+    .getattr    = gphotofs_getattr,
+    .open       = gphotofs_open,
+    .read       = gphotofs_read,
+    .release    = gphotofs_release,
+    .unlink     = gphotofs_unlink,
 
-    .write	= gphotofs_write,
-    .mkdir	= gphotofs_mkdir,
-    .rmdir	= gphotofs_rmdir,
-    .mknod	= gphotofs_mknod,
-    .flush	= gphotofs_flush,
-    .fsync	= gphotofs_fsync,
+    .write      = gphotofs_write,
+    .mkdir      = gphotofs_mkdir,
+    .rmdir      = gphotofs_rmdir,
+    .mknod      = gphotofs_mknod,
+    .flush      = gphotofs_flush,
+    .fsync      = gphotofs_fsync,
 
-    .chmod	= gphotofs_chmod,
-    .chown	= gphotofs_chown,
+    .chmod      = gphotofs_chmod,
+    .chown      = gphotofs_chown,
 
-    .statfs	= gphotofs_statfs
+    .statfs     = gphotofs_statfs
 };
 
 static GOptionEntry options[] =
