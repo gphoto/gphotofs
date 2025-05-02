@@ -1,6 +1,7 @@
 What's new in 1.0
 -----------------
 
+- ported to fuse3
 - do not check events in read (slows it down too much)
 - use the random read function if present to avoid using too much memory
 - refresh directories on file/folder addition 

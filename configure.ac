@@ -1,5 +1,5 @@
 AC_PREREQ(2.59)
-AC_INIT([gphoto filesystem], [0.9], [gphoto-devel@lists.sourceforge.net], [gphotofs])
+AC_INIT([gphoto filesystem], [1.0], [gphoto-devel@lists.sourceforge.net], [gphotofs])
 AC_CONFIG_SRCDIR([gphotofs.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
@@ -16,7 +16,7 @@ AM_PROG_CC_C_O
 
 GP_PKG_CONFIG
 
-PKG_CHECK_MODULES([FUSE], [fuse >= 2.5])
+PKG_CHECK_MODULES([FUSE], [fuse3 >= 2.5])
 AC_SUBST([FUSE_CFLAGS])
 AC_SUBST([FUSE_LIBS])
 
