@@ -904,7 +904,7 @@ gphotofs_connect()
 }
 
 static void *
-gphotofs_init()
+gphotofs_init(struct fuse_conn_info *conn, struct fuse_config *config)
 {
    GPCtx *p;
 
